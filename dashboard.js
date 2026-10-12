@@ -409,3 +409,21 @@ if(metaTab) {
 }
 }
 });
+
+// Bulk Manifest Generator & Clipboard Exporter
+function generateBulkManifest(deck) {
+if (!deck || !deck.acquisitionState) return "";
+
+let manifestLines = [];
+Object.keys(deck.acquisitionState).forEach(cardKey => {
+const state = deck.acquisitionState[cardKey];
+const needed = state.target - (state.acquired || 0);
+if (needed > 0) {
+  const cardMeta = deck.marketData?.find(c => c.name.toLowerCase() === cardKey);
+  const cardName = cardMeta ? cardMeta.name : cardKey;
+  manifestLines.push(`${needed} ${cardName}`);
+}
+});
+
+return manifestLines.join("\n");
+}
