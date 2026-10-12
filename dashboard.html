@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mirror Pool Scout | Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="brand">◈ MIRROR POOL™</div>
+    <ul class="nav">
+      <li class="active" data-target="watchlist">Live Watchlist</li>
+      <li data-target="hunter">Procurement Hunter</li>
+      <li data-target="meta">Meta Analytics</li>
+      <li data-target="prefs">Preferences</li>
+    </ul>
+    <div class="status-box">
+      <div class="status-label">SUITE CONNECTION</div>
+      <div class="status-val" style="color:#eab308;">Standalone Mode</div>
+    </div>
+  </div>
+  
+  <div class="main-content">
+    <div class="header">
+      <h1 id="view-title">Procurement Hunter</h1>
+      <div class="stats-row" id="header-stats">
+        <div class="stat-card">Market Total: <span id="stat-market-total" style="color:#eab308;">$0.00</span></div>
+        <div class="stat-card">Total Spent: <span id="stat-spent-total" style="color:#00ffcc;">$0.00</span></div>
+        <div class="stat-card">Net Variance: <span id="stat-variance" style="color:#3fb950;">$0.00</span></div>
+      </div>
+    </div>
+    
+    <!-- Tab 1: Live Watchlist -->
+    <div id="view-watchlist" class="grid-container view-section" style="display:none;"></div>
+
+    <!-- Tab 2: Procurement Hunter -->
+    <div id="view-hunter" class="view-section" style="padding: 30px; overflow-y: auto;">
+      <div class="deck-manager-header" style="display:flex; justify-content:space-between; margin-bottom: 20px;">
+        <select id="deck-select" style="background:#21262d; color:#c9d1d9; border:1px solid #30363d; padding:8px; border-radius:4px; font-weight:bold; flex:1; margin-right:10px;">
+          <option value="new">+ Create New Decklist</option>
+        </select>
+        <button id="btn-delete-deck" style="background:none; border:1px solid #da3633; color:#da3633; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">Delete List</button>
+      </div>
+
+      <div style="background:#0d1117; padding:20px; border:1px solid #30363d; border-radius:6px; margin-bottom: 20px;">
+        <div style="display:flex; gap:15px; margin-bottom:15px;">
+          <div style="flex:2;">
+            <label style="display:block; font-size:11px; color:#8b949e; margin-bottom:5px;">Deck Name</label>
+            <input type="text" id="deck-name" placeholder="e.g. Dimir Rogues" style="width:100%; background:#21262d; border:1px solid #30363d; color:#fff; padding:8px; border-radius:4px;">
+          </div>
+          <div style="flex:1;">
+            <label style="display:block; font-size:11px; color:#8b949e; margin-bottom:5px;">Printing Target</label>
+            <select id="pref-printing" style="width:100%; background:#21262d; border:1px solid #30363d; color:#fff; padding:8px; border-radius:4px;">
+              <option value="Any">Any Printing</option>
+              <option value="Normal" selected>Normal Only</option>
+              <option value="Foil">Foil Only</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label style="display:block; font-size:11px; color:#8b949e; margin-bottom:5px;">Condition Floor</label>
+            <select id="pref-condition" style="width:100%; background:#21262d; border:1px solid #30363d; color:#fff; padding:8px; border-radius:4px;">
+              <option value="Any" selected>Any Condition</option>
+              <option value="Near Mint">Near Mint (NM)</option>
+              <option value="Lightly Played">Lightly Played (LP)</option>
+            </select>
+          </div>
+        </div>
+        <label style="display:block; font-size:11px; color:#8b949e; margin-bottom:5px;">Decklist (Format: "4 Brainstorm")</label>
+        <textarea id="deck-import-area" placeholder="Paste your list here..." style="width:100%; height:120px; background:#21262d; color:#c9d1d9; border:1px solid #30363d; padding:12px; border-radius:4px; font-family:monospace; resize:vertical; margin-bottom:15px; box-sizing: border-box;"></textarea>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div id="deck-save-status" style="color:#3fb950; font-size:12px; font-weight:bold;"></div>
+          <button id="btn-parse-deck" style="background:#238636; color:#fff; border:none; padding:10px 20px; border-radius:4px; font-weight:bold; cursor:pointer;">⚡ Save & Generate Procurement Sheet</button>
+        </div>
+      </div>
+      <div id="hunter-results" class="grid-container" style="padding:0;"></div>
+    </div>
+
+    <!-- Tab 3: Meta Analytics -->
+    <div id="view-meta" class="view-section" style="display:none; padding: 30px; overflow-y: auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+        <h2 style="margin:0; color:#00ffcc;">Global Meta Tracker</h2>
+        <select id="meta-format-select" style="background:#21262d; color:#c9d1d9; border:1px solid #30363d; padding:8px; border-radius:4px; font-weight:bold;">
+          <option value="Standard">Standard</option>
+          <option value="Pioneer">Pioneer</option>
+          <option value="Modern">Modern</option>
+          <option value="Commander">Commander</option>
+        </select>
+      </div>
+      <div id="meta-results-container" class="grid-container" style="padding:0; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"></div>
+    </div>
+
+    <!-- Tab 4: Preferences -->
+    <div id="view-prefs" class="view-section" style="display:none; padding: 30px;">
+      <h2 style="color:#00ffcc; margin-top:0;">Global Extension Preferences</h2>
+      <p style="color:#8b949e;">Suite integration targets and API throttling configuration.</p>
+    </div>
+  </div>
+  <script src="dashboard.js"></script>
+</body>
+</html>

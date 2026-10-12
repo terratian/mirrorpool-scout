@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Mirror Pool Sniper & Overwatch",
+  "version": "1.2.0",
+  "description": "Cross-platform card auction sniper, extended bidding sentinel, and live comps radar",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "alarms"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Mirror Pool Scout"
+  },
+  "host_permissions": [
+    "*://*.ebay.com/*",
+    "*://*.tcgplayer.com/*",
+    "*://*.fanaticscollect.com/*",
+    "*://*.goldin.co/*",
+    "*://*.cardmarket.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.ebay.com/itm/*",
+        "*://*.tcgplayer.com/product/*",
+        "*://*.fanaticscollect.com/*",
+        "*://*.goldin.co/*",
+        "*://*.cardmarket.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
