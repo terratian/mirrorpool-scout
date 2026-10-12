@@ -150,3 +150,41 @@ document.addEventListener("DOMContentLoaded", initScoutBadge);
 initScoutBadge();
 }
 })();
+
+// eBay Live Watchlist Payload
+function pushToWatchlist(cardName, currentBid, timeRemaining) {
+    const snipeData = {
+        cardName: cardName,
+        platform: "eBay",
+        currentBid: currentBid,
+        timeRemaining: timeRemaining,
+        url: window.location.href,
+        timestamp: Date.now()
+    };
+
+    chrome.storage.local.get(['liveWatchlist'], (result) => {
+        const watchlist = result.liveWatchlist || [];
+        watchlist.push(snipeData);
+        chrome.storage.local.set({ liveWatchlist: watchlist });
+        alert("Snipe saved to Mirror Pool Dashboard!");
+    });
+}
+
+// eBay Live Watchlist Payload
+function pushToWatchlist(cardName, currentBid, timeRemaining) {
+    const snipeData = {
+        cardName: cardName,
+        platform: "eBay",
+        currentBid: currentBid,
+        timeRemaining: timeRemaining,
+        url: window.location.href,
+        timestamp: Date.now()
+    };
+
+    chrome.storage.local.get(['liveWatchlist'], (result) => {
+        const watchlist = result.liveWatchlist || [];
+        watchlist.push(snipeData);
+        chrome.storage.local.set({ liveWatchlist: watchlist });
+        alert("Snipe saved to Mirror Pool Dashboard!");
+    });
+}
