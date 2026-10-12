@@ -188,3 +188,52 @@ function pushToWatchlist(cardName, currentBid, timeRemaining) {
         alert("Snipe saved to Mirror Pool Dashboard!");
     });
 }
+
+// Wire the injected Bookmark button to the Watchlist Payload
+function bindBookmarkButton() {
+    // Target the button inside your injected UI overlay
+    // Ensure this ID matches the exact ID in your content script's HTML injection
+    const bookmarkBtn = document.getElementById('mirror-pool-bookmark-btn');
+    
+    if (bookmarkBtn) {
+        bookmarkBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            // 1. Scrape the live DOM for current auction variables
+            // These selectors target standard eBay DOM elements. Update them if eBay's structure shifts.
+            const rawTitle = document.querySelector('.x-item-title__mainTitle') 
+                             ? document.querySelector('.x-item-title__mainTitle').innerText 
+                             : "Unknown Card";
+            
+            const rawPrice = document.querySelector('.x-price-primary') 
+                             ? document.querySelector('.x-price-primary').innerText.replace(/[^0-9.]/g, '') 
+                             : "0.00";
+            
+            const rawTime = document.querySelector('.x-timer-module__timer') 
+                            ? document.querySelector('.x-timer-module__timer').innerText 
+                            : "N/A";
+            
+            // Clean up the card name (removes standard eBay fluff)
+            const cleanName = rawTitle.replace(/MTG|Magic the Gathering|NM|Mint|Foil/gi, '').trim();
+
+            // 2. Fire the payload to the Dashboard
+            pushToWatchlist(cleanName, parseFloat(rawPrice), rawTime);
+            
+            // 3. Update the UI for visual confirmation
+            const originalText = bookmarkBtn.innerText;
+            bookmarkBtn.innerText = '✅ Saved to Dashboard';
+            bookmarkBtn.style.backgroundColor = '#2ea043';
+            bookmarkBtn.disabled = true;
+            
+            setTimeout(() => {
+                bookmarkBtn.innerText = originalText;
+                bookmarkBtn.style.backgroundColor = '';
+                bookmarkBtn.disabled = false;
+            }, 3000);
+        });
+    }
+}
+
+// Ensure the listener binds after your overlay is injected into the DOM
+// Call this function inside your main initialization loop
+setTimeout(bindBookmarkButton, 2500); 
