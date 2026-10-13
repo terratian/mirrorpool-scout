@@ -7,245 +7,190 @@
         :root {
             --bg-base: #030712;
             --bg-panel: #0b1120;
-            --bg-card: #1e293b;
-            --border-color: #334155;
-            --accent-green: #10b981;
-            --accent-blue: #3b82f6;
-            --accent-gold: #f59e0b;
+            --bg-card: #0f172a;
+            --border-color: #1e293b;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-red: #ef4444;
         }
-
+        * { box-sizing: border-box; }
         body {
             margin: 0;
             padding: 0;
+            display: flex;
+            height: 100vh;
             background-color: var(--bg-base);
             color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            display: flex;
-            height: 100vh;
             overflow: hidden;
         }
-
-        /* Left Navigation */
         .sidebar {
-            width: 220px;
+            width: 240px;
             background-color: var(--bg-panel);
             border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
             padding: 16px;
         }
-
         .brand-logo {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 800;
             color: var(--accent-green);
-            letter-spacing: 0.5px;
             margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
-
         .nav-section {
-            font-size: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
             text-transform: uppercase;
-            color: var(--text-muted);
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-            margin-top: 16px;
+            margin: 12px 0 6px 0;
         }
-
         .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            display: block;
             padding: 10px 12px;
             color: var(--text-muted);
             text-decoration: none;
             font-size: 13px;
-            font-weight: 500;
+            font-weight: 600;
             border-radius: 6px;
-            transition: all 0.2s ease;
             margin-bottom: 4px;
+            cursor: pointer;
         }
-
         .nav-item:hover, .nav-item.active {
             background-color: var(--bg-card);
             color: var(--text-main);
         }
-
         .nav-item.active {
             border-left: 3px solid var(--accent-green);
         }
-
-        /* Main Content Area */
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
+            padding: 24px;
             overflow-y: auto;
-            padding: 20px;
         }
-
         .header-title {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 700;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .card-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+        }
+        .card-box-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-
-        /* Cards & Panels */
-        .card {
-            background-color: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .metric-box {
-            background-color: var(--bg-card);
-            padding: 10px;
-            border-radius: 6px;
-            text-align: center;
-        }
-
-        .metric-label {
-            font-size: 10px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-
-        .metric-value {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        /* Buttons & Inputs */
-        textarea {
-            width: 100%;
-            height: 80px;
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-main);
-            padding: 8px;
-            font-family: monospace;
-            font-size: 12px;
-            resize: none;
-            box-sizing: border-box;
-            margin-bottom: 10px;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: var(--accent-blue);
-        }
-
-        .btn {
-            width: 100%;
-            background-color: var(--accent-blue);
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 12px;
-            cursor: pointer;
-            transition: background 0.2s;
             margin-bottom: 8px;
         }
-
-        .btn:hover { background-color: #2563eb; }
-        .btn-green { background-color: var(--accent-green); color: #030712; }
-        .btn-green:hover { background-color: #059669; color: white; }
-
-        /* Footer */
-        .footer {
-            margin-top: auto;
+        .badge {
             font-size: 10px;
-            color: var(--text-muted);
-            text-align: center;
-            border-top: 1px solid var(--border-color);
-            padding-top: 12px;
+            font-weight: 700;
+            padding: 3px 6px;
+            border-radius: 4px;
         }
-        .footer a { color: var(--accent-green); text-decoration: none; }
+        .btn {
+            background: var(--accent-blue);
+            color: #fff;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-green { background: var(--accent-green); color: #030712; }
+        textarea {
+            width: 100%;
+            height: 100px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-main);
+            padding: 10px;
+            font-family: monospace;
+            margin-bottom: 12px;
+        }
     </style>
 </head>
 <body>
-
-    <!-- Sidebar Navigation -->
     <div class="sidebar">
-        <div class="brand-logo">
-            🔮 MIRROR POOL
-        </div>
-
+        <div class="brand-logo">🔮 MIRROR POOL</div>
         <div class="nav-section">Workspace</div>
-        <a href="#" class="nav-item active">📊 Live Watchlist</a>
-        <a href="#" class="nav-item">🎯 Procurement Hunter</a>
-        <a href="#" class="nav-item">⚖️ Arbitrage Desk</a>
-        <a href="#" class="nav-item">📈 Meta Analytics</a>
-
+        <a class="nav-item active" data-tab="tab-watchlist">Live Watchlist</a>
+        <a class="nav-item" data-tab="tab-chase">Procurement Hunter</a>
+        <a class="nav-item" data-tab="tab-arbitrage">Arbitrage Desk</a>
+        <a class="nav-item" data-tab="tab-meta">Meta Analytics</a>
         <div class="nav-section">Preferences</div>
-        <a href="#" class="nav-item">⚙️ Settings & API</a>
-
-        <div class="footer">
-            Alpha Build<br><a href="https://gumroad.com" target="_blank">Upgrade ($9 Lifetime)</a>
-        </div>
+        <a class="nav-item" data-tab="tab-settings">Settings & API</a>
     </div>
 
-    <!-- Main Workspace -->
     <div class="main-content">
-        <div class="header-title">
-            <span>Live Watchlist & Portfolios</span>
-        </div>
-
-        <!-- Action / Scrape Controls -->
-        <div class="card">
-            <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Quick Deck Import & Brew</div>
-            <textarea id="manual-deck-input" placeholder="Paste decklist here (e.g. 4 Thoughtseize)..."></textarea>
-            <button class="btn btn-green" id="load-brew-btn">🛠️ Load & Analyze Brew</button>
-            <button class="btn" id="import-deck-btn">🌐 Scrape Active Tab (MTGDecks)</button>
-        </div>
-
-        <!-- Active Deck Panel / Metrics HUD -->
-        <div class="card" id="active-deck-panel" style="display: none;">
-            <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--accent-green);">Active Deck Metrics</div>
-            
-            <div class="metrics-grid">
-                <div class="metric-box">
-                    <div class="metric-label">Win Rate</div>
-                    <div class="metric-value" id="hud-winrate" style="color: var(--accent-green);">54.2%</div>
-                </div>
-                <div class="metric-box">
-                    <div class="metric-label">Paper Value</div>
-                    <div class="metric-value" id="hud-paper" style="color: var(--accent-gold);">$0.00</div>
-                </div>
-                <div class="metric-box">
-                    <div class="metric-label">MTGO TIX</div>
-                    <div class="metric-value" id="hud-mtgo" style="color: var(--accent-blue);">0.0 TIX</div>
+        <!-- 1. Live Watchlist Tab -->
+        <div id="tab-watchlist" class="tab-panel active">
+            <div class="header-title">Live Watchlist & Portfolios</div>
+            <div class="card-box" style="margin-bottom: 20px;">
+                <div style="font-weight: 700; margin-bottom: 8px;">Quick Deck Import & Brew</div>
+                <textarea id="manual-deck-input" placeholder="Paste decklist here (e.g. 4 Thoughtseize)..."></textarea>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-green" id="load-brew-btn">🛠 Load & Analyze Brew</button>
+                    <button class="btn" id="scrape-tab-btn">Scrape External Tab (MTGDecks)</button>
                 </div>
             </div>
+            <div id="watchlist-cards-grid" class="card-grid"></div>
+        </div>
 
-            <div style="display: flex; gap: 8px;">
-                <button class="btn" id="share-deck-btn" style="margin-bottom: 0;">📋 Export List</button>
-                <button class="btn" id="export-mtga-btn" style="margin-bottom: 0; background-color: #334155;">🎮 Copy MTGA</button>
+        <!-- 2. Procurement Hunter (Card Chase) Tab -->
+        <div id="tab-chase" class="tab-panel">
+            <div class="header-title">Procurement Hunter (Active Targets)</div>
+            <div id="chase-cards-grid" class="card-grid">
+                <div style="color:var(--text-muted); font-size:13px;">No bookmarked items yet. Add cards from eBay listings to track purchase targets.</div>
             </div>
         </div>
 
+        <!-- 3. Arbitrage Desk Tab -->
+        <div id="tab-arbitrage" class="tab-panel">
+            <div class="header-title">Arbitrage Desk (Paper vs Digital)</div>
+            <div class="card-box" style="margin-bottom:16px;">
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:10px;">Compares physical paper cost against MTGO TIX redemption cash-out values (~0.92 conversion).</div>
+                <div id="arbitrage-summary" style="font-size:14px; font-weight:700; color:var(--accent-green);">Awaiting Deck Import or Bookmarks.</div>
+            </div>
+            <div id="arbitrage-list" class="card-grid"></div>
+        </div>
+
+        <!-- 4. Meta Analytics Tab -->
+        <div id="tab-meta" class="tab-panel">
+            <div class="header-title">Global Meta Tracker</div>
+            <div class="card-grid">
+                <div class="card-box">
+                    <div class="card-box-header">
+                        <strong>Commander Staples</strong>
+                        <span class="badge" style="background:#10b981; color:#030712;">Format Anchor</span>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-muted);">High liquidity multi-deck targets: Land Tax, Sol Ring, Inkshield, Thoughtseize.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Settings Tab -->
+        <div id="tab-settings" class="tab-panel">
+            <div class="header-title">Settings & API Configuration</div>
+            <div class="card-box">
+                <div style="font-size:13px; color:var(--text-muted);">Scryfall Pricing API: <strong>Connected (Public Tier)</strong></div>
+            </div>
+        </div>
     </div>
 
     <script src="dashboard.js"></script>

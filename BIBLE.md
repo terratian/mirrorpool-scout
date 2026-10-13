@@ -64,3 +64,9 @@
 ## 8. Data Persistence & Overlay Rebuild (October 2026)
 * **eBay Overlay Injection:** Completely rebuilt `content.src.js` to ensure reliable DOM injection on eBay, parsing the exact card name from Item Specifics without causing ReferenceErrors.
 * **Procurement Hunter Sync:** Wired the widget's "Bookmark" button to `chrome.storage.local`, dynamically rendering saved eBay deals into the dashboard's "Card Chase" panel using `sync_to_dashboard`.
+
+## 9. Deal Evaluation & Multi-View Workspace (October 2026)
+* **Syntax Error Cleaned:** Replaced fragile string concatenation in `content.src.js` with structured object templates to resolve `Uncaught SyntaxError` token parsing.
+* **Algorithmic Deal Grading:** The eBay overlay now computes an on-the-fly Deal Grade ($A+$ to Overpriced) based on the percentage delta between active listing price and Scryfall Paper Floor.
+* **Metagame Tagging:** Injects cross-format archetype categorization tags onto saved items.
+* **Active Tab Panels:** Restored separate view-rendering for `tab-watchlist`, `tab-chase` (Procurement Hunter), and `tab-arbitrage` (Arbitrage Desk) in `dashboard.html` / `dashboard.js`.
