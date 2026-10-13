@@ -13,9 +13,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (importBtn) {
         importBtn.addEventListener("click", () => {
             importBtn.innerText = "⏳ Scanning...";
-            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            chrome.tabs.query({active: true, lastFocusedWindow: true}, (tabs) => {
                 if (tabs[0].url.includes("mtgdecks.net") || tabs[0].url.includes("magic.gg") || tabs[0].url.includes("wizards.com")) {
-                    chrome.tabs.sendMessage(tabs[0].id, {action: "extract_deck"}, (response) => {
+                    if (!tabs || !tabs[0]) { 
+        alert("No target tab found. Please click the window containing the MTG listing first."); 
+        document.querySelector(".mp-btn").innerText = "Load & Analyze Brew"; // Reset button state
+        return; 
+    }
+    chrome.tabs.sendMessage(tabs[0].id, {action: "extract_deck"}, (response) => {
                         if (response && response.status === "success") {
                             importBtn.innerText = "✅ Deck Imported";
                             activeDeckPanel.style.display = "block";

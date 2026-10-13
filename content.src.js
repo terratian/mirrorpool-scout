@@ -84,9 +84,18 @@ targetParent.parentNode.insertBefore(badge, targetParent.nextSibling);
 let trueMarketFloor = "N/A";
 
 // Clean eBay title for API matching
-searchTitle = searchTitle.replace(/^(NM|LP|MP|HP|Foil)\s*[-|:]?\s*/i, "").replace(/\[.*?\]/g, "").split("-")[0].trim();
 
-chrome.runtime.sendMessage({ action: "fetchComps", cardTitle: searchTitle }, (res) => {
+
+    // Mirror Pool: Smart eBay Title Extraction
+    let itemSpec = Array.from(document.querySelectorAll(".ux-labels-values__labels")).find(el => el.innerText.includes("Card Name"));
+    if (itemSpec && itemSpec.nextElementSibling) {
+        searchTitle = itemSpec.nextElementSibling.innerText.trim();
+    } else {
+        // Fallback cleanup
+        searchTitle = searchTitle.replace(/^(MTG|Magic: The Gathering|NM|LP|MP|HP|Foil)\s*[-|:]?\s*/ig, "").replace(/\[.*?\]/g, "").split("-")[0].trim();
+    }
+    chrome.runtime.sendMessage({ action: "fetchComps"
+, cardTitle: searchTitle }, (res) => {
   const verdictContainer = badge.querySelector('#mp-deal-verdict-container');
   
   if (!res || !res.found) {

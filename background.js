@@ -51,7 +51,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "openDashboard") {
         // Check if Side Panel API is available, otherwise fallback to standard tab
         if (chrome.sidePanel && sender.tab) {
-            chrome.sidePanel.open({ windowId: sender.tab.windowId });
+            chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
         } else {
             chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
         }
