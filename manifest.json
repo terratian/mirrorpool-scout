@@ -43,6 +43,17 @@
         "content.css"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://*.tcgplayer.com/*",
+        "*://*.mtggoldfish.com/*",
+        "*://*.ebay.com/*",
+        "*://*.mtgdecks.net/*"
+      ],
+      "js": [
+        "scout-overlay.js"
+      ]
     }
   ],
   "short_name": "Scout",
