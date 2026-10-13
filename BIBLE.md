@@ -1,77 +1,33 @@
-# Mirror Pool Scout - Project Bible & Architecture Log
+# Mirror Pool Scout - Master Architecture Bible
 
-## 1. Project Overview & Monetization
+## 1. Distribution & Licensing
 * **Application:** Mirror Pool Scout (Standalone Alpha Chrome Extension)
-* **Target Audience:** Magic: The Gathering traders, competitive deck brewers, and card arbitrage hunters.
-* **Distribution Model:** Manual sideload (.zip) / Gumroad early-access lifetime license ($9) and subscription gating ($9.99/mo tier target).
-* **Remote Repository:** `github.com/terratian/mirrorpool-scout`
+* **Target:** MTG Grinders, arbitrageurs, collectors, and deck builders.
+* **Pricing Model:** $9 Gumroad Lifetime License.
+* **Repository:** `github.com/terratian/mirrorpool-scout`
 
 ---
 
-## 2. Implemented Features & UI Taxonomy
-* **Dashboard View:** Dedicated full browser tab UI (`dashboard.html` / `dashboard.js`).
-* **Navigation Taxonomy:**
-  - `Watchlist` (formerly Live Watchlist)
-  - `Card Chase` (formerly Procurement Hunter)
-  - `Market Insights` (formerly Meta Analytics)
-  - `Arbitrage Desk`
-* **Deck Extraction & Parsing:**
-  - Manual text decklist import (`#manual-deck-input`, `#load-brew-btn`).
-  - On-site DOM scraper targeting `mtgdecks.net` and Wizards domains (`magic.gg`, `wizards.com`).
-  - Branded export to clipboard for Discord/Reddit and Arena-friendly raw text export (`#export-mtga-btn`).
-* **Financial & Arbitrage Engine:**
-  - Cross-platform price spread calculation (`calculateArbitrageDelta`).
-  - Compares Paper Floor vs MTGO TIX (cash conversion multiplier at ~0.92).
-  - Metrics HUD displaying Win Rate, Paper Value, MTGO TIX, and Arbitrage Spread.
-* **Multi-Domain Extraction & Storage:**
-  - Declarative extraction rules in `metrics-schema.js` targeting MTGGoldfish, TCGplayer, eBay, and MTGDecks.
-  - User-intent migration popup (`popup.html` / `popup.js`) passing structured payloads into `chrome.storage.local`.
+## 2. Restored Architectural Modules
+### A. Live Watchlist Engine
+- **Header Metrics:** Live computation of `Market Total`, `Total Spent`, and `Net Variance`.
+- **Listing Cards:** Tracks live eBay auction bids, Buy-It-Now pricing, shipping breakdown, watcher activity, and time remaining.
+- **State Management:** CSP-compliant card deletion (`Drop Target`) without DOM injection leaks.
 
----
+### B. Procurement Hunter (Deck Chase & Acquisition Tracker)
+- **Deck Target Importer:** Multi-format parser handling pasted decklists and direct scraping from MTGDecks / Goldfish.
+- **Acquisition State:** In-place tracking (`0 / 1 Acquired`) with dynamic basis logging (`Basis Spent`).
+- **Marketplace Deep-Links:** One-click links directly into filtered TCGplayer lowest floor, eBay Buy-It-Now, and eBay Live Auctions.
+- **Bulk Cart Manifest Exporter:** Generates formatted quantity-name manifests for direct mass-entry into marketplace carts.
 
-## 3. Active Bug Registry & Known Regressions
-* **BUG-01: Full-Tab Messaging Self-Loop**
-  - *Symptom:* Clicking "Scrape Active Tab" gets stuck indefinitely on "Scanning...".
-  - *Root Cause:* Running `dashboard.html` as a dedicated Chrome tab causes `chrome.tabs.query({active: true, currentWindow: true})` to return the dashboard itself rather than the external target tab (`mtgdecks.net` or `ebay.com`).
-  - *Required Fix:* Query tabs explicitly by URL patterns (`*://*.mtgdecks.net/*`, `*://*.ebay.com/*`) or rely on `lastFocusedWindow`.
-* **BUG-02: Manifest Script References**
-  - *Symptom:* Chrome extension loader errors (`scout-overlay.js` or icon load failures).
-  - *Status:* `scout-overlay.js` removed from manifest; icon paths verified.
-* **BUG-03: DOM Parsing Fragility**
-  - *Symptom:* Generic text (such as privacy/CCPA footers) occasionally extracted instead of card names on aggregate pages.
-  - *Fix Implemented:* Filter out header/footer noise tags and prioritize specific product metadata selectors.
+### C. Cross-Platform Arbitrage Desk
+- **Algorithm:** Mathematical comparison of physical Paper Market Floor against digital MTGO TIX redemption values using the calibrated ~$0.92 cash-out conversion factor.
+- **Spread Matrix:** Itemized net dollar delta and percentage margins.
 
----
+### D. Meta Analytics & Archetype Tracker
+- **Competitive Field:** Tracking meta share and estimated paper completion costs for dominant format archetypes (Standard, Modern, Commander, Pioneer).
+- **One-Click Pipeline:** 1-click import transfers tournament archetype decklists straight into the Procurement Hunter acquisition grid.
 
-## 4. Roadmap & Future Architecture
-* **Phase 2 (DOM Inspector):** Lightweight automated health-check script to detect when target site class names change, prompting local scraper updates.
-* **Phase 3 (Proxmox / Suite Backend):** Transition client-side scraping to a server-backed FastAPI backend deployed on Proxmox, backed by a SQLite/PostgreSQL Scryfall bulk data registry.
-
-## 5. Critical Restorations (October 2026)
-* **UI Taxonomy:** Restored full dashboard.html/js from commit 1db4cfb to rescue the Arbitrage Engine and Card Chase UI.
-* **API Engine:** Re-implemented the `fetchComps` Scryfall API listener in `background.js` to restore TCG pricing and metrics.
-
-## 6. Stability Patch & Overlay Restoration (October 2026)
-* **Tab Routing Fixed:** Purged `default_popup` from `manifest.json` to allow `chrome.action.onClicked` in `background.js` to reliably create full `dashboard.html` tabs.
-* **Widget Button Connection:** Implemented unconditional `openDashboard` handler in `background.js` to open `dashboard.html` when triggered from the eBay overlay.
-* **Scryfall Engine Active:** Re-established `fetchComps` message listener in service worker with fuzzy search endpoint.
-* **Title Sanitizer:** Enhanced `content.src.js` regex to strip set prefixes (`COMMANDER: BLOOMBURROW`), collector codes (`BLC #20`), and condition strings (`EN NF NM`) before querying pricing.
-
-## 7. Navigation & Extraction Stability (October 2026)
-* **Dashboard Navigation:** Implemented DOM-based tab router in `dashboard.js` to handle active states and view switching for left-pane buttons.
-* **eBay Extraction Protocol:** Shifted `content.src.js` away from raw title regex parsing. Scraper now prioritizes explicit `Card Name` properties within eBay's structured `.ux-labels-values__labels` item specifics table.
-
-## 8. Data Persistence & Overlay Rebuild (October 2026)
-* **eBay Overlay Injection:** Completely rebuilt `content.src.js` to ensure reliable DOM injection on eBay, parsing the exact card name from Item Specifics without causing ReferenceErrors.
-* **Procurement Hunter Sync:** Wired the widget's "Bookmark" button to `chrome.storage.local`, dynamically rendering saved eBay deals into the dashboard's "Card Chase" panel using `sync_to_dashboard`.
-
-## 9. Deal Evaluation & Multi-View Workspace (October 2026)
-* **Syntax Error Cleaned:** Replaced fragile string concatenation in `content.src.js` with structured object templates to resolve `Uncaught SyntaxError` token parsing.
-* **Algorithmic Deal Grading:** The eBay overlay now computes an on-the-fly Deal Grade ($A+$ to Overpriced) based on the percentage delta between active listing price and Scryfall Paper Floor.
-* **Metagame Tagging:** Injects cross-format archetype categorization tags onto saved items.
-* **Active Tab Panels:** Restored separate view-rendering for `tab-watchlist`, `tab-chase` (Procurement Hunter), and `tab-arbitrage` (Arbitrage Desk) in `dashboard.html` / `dashboard.js`.
-
-## 10. Dashboard UX & Algorithm Restoration (October 2026)
-* **Tab Focus Router:** Replaced `chrome.tabs.create` with `chrome.tabs.query` in `background.js` to focus existing dashboard tabs instead of spawning duplicates.
-* **CSP Compliance:** Rewrote dynamically injected button handlers (`Drop Target`) to use distinct DOM event listeners instead of inline `onclick` attributes, resolving manifest security blocks.
-* **Algorithm Integration:** Re-integrated `calculateArbitrageDelta` into `dashboard.js` to process multi-item array iterations, and linked the Export button to the Bulk Cart Manifest formatting logic.
+### E. eBay & Multi-Marketplace Content Inspector
+- **Smart Extraction:** Prioritizes `.ux-labels-values__labels` Item Specifics table for exact card name extraction, bypassing set strings and conditions.
+- **Algorithmic Deal Tiering:** Automatically assigns S-Tier ($20\%+$ discount), Good Deal ($5\%+$ discount), Fair Market Value, or Overpriced flags.

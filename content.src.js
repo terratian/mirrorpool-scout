@@ -1,139 +1,177 @@
-// Mirror Pool Scout - eBay Overlay & Market Inspector
+// Mirror Pool Scout - Marketplace Inspector & Overlay
 
-function initScoutOverlay() {
-    if (document.getElementById("mirror-pool-overlay")) return;
+(() => {
+    if (document.getElementById("mirrorpool-badge-root")) return;
 
-    // 1. Extract Target Card Name
-    let cardName = "";
-    const labels = document.querySelectorAll(".ux-labels-values__labels");
-    for (let label of labels) {
-        if (label.innerText.trim().toLowerCase() === "card name") {
-            const val = label.nextElementSibling;
-            if (val) {
-                cardName = val.innerText.trim();
-                break;
+    function initScoutBadge() {
+        const priceContainer = document.querySelector(".x-price-primary") || 
+                               document.querySelector(".x-bin-price") || 
+                               document.querySelector(".x-bid-price") ||
+                               document.querySelector(".main-price");
+        if (!priceContainer) return;
+
+        const titleEl = document.querySelector(".x-item-title__mainTitle") || document.querySelector("h1");
+        let rawTitle = titleEl ? titleEl.innerText.trim() : document.title;
+
+        // 1. Precise Item Specifics Extraction
+        let searchTitle = "";
+        const labels = document.querySelectorAll(".ux-labels-values__labels");
+        for (let label of labels) {
+            if (label.innerText.trim().toLowerCase().includes("card name")) {
+                const val = label.nextElementSibling;
+                if (val) {
+                    searchTitle = val.innerText.trim();
+                    break;
+                }
             }
         }
-    }
 
-    if (!cardName) {
-        const titleEl = document.querySelector(".x-item-title__mainTitle span, h1");
-        let raw = titleEl ? titleEl.innerText : document.title;
-        raw = raw.replace(/^MTG\s*(COMMANDER:?\s*)?/i, "");
-        raw = raw.replace(/^(Magic:?\s*The\s*Gathering|NM|LP|MP|HP|Foil|Pre-Owned)\s*[-|:]?\s*/ig, "");
-        raw = raw.replace(/[A-Z0-9]{3,4}\s*#?\d+.*$/i, "");
-        raw = raw.replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").split("|")[0].trim();
-        cardName = raw;
-    }
+        // Fallback Sanitizer
+        if (!searchTitle) {
+            searchTitle = rawTitle.replace(/\b(MTG|MAGIC THE GATHERING|MAGIC|COMMANDER|DUSKMOURN|BLOOMBURROW|LEGENDS|BALDUR'S GATE|NM|MINT|LP|SP|MP|HP|FOIL|NF|EN|ENGLISH|PSA|BGS|CGC|TCG|WOTC)\b/gi, '');
+            searchTitle = searchTitle.replace(/\b[A-Z0-9]{3,4}\b/g, '');
+            searchTitle = searchTitle.replace(/#\d+/g, '');
+            searchTitle = searchTitle.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '');
+            searchTitle = searchTitle.replace(/[^a-zA-Z\s\-',]/g, ' ').replace(/\s+/g, ' ').trim();
+            if (searchTitle.length < 3) searchTitle = rawTitle.split("|")[0].trim();
+        }
 
-    // 2. Extract Price from eBay Listing
-    const priceEl = document.querySelector(".x-price-primary span, .main-price span");
-    const ebayPriceStr = priceEl ? priceEl.innerText.replace(/[^0-9.]/g, '') : "0.00";
-    const ebayPrice = parseFloat(ebayPriceStr) || 0;
+        // 2. Financial Metrics Parsing
+        const rawPriceText = priceContainer.innerText || "";
+        const cleanPriceMatch = rawPriceText.replace(/,/g, "").match(/[\d.]+/);
+        const listedPrice = cleanPriceMatch ? parseFloat(cleanPriceMatch[0]) : 0;
 
-    // 3. Inject Clean Floating Inspector
-    const overlay = document.createElement("div");
-    overlay.id = "mirror-pool-overlay";
-    overlay.style.cssText = "position:fixed; bottom:20px; right:20px; z-index:2147483647; background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:14px; width:280px; color:#f8fafc; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-shadow:0 10px 25px -5px rgba(0,0,0,0.6); font-size:12px;";
+        let shippingCost = 0;
+        const shippingEl = document.querySelector('.ux-labels-values--shipping') || 
+                           document.querySelector('.sh-str') || 
+                           document.querySelector('.ux-textspans--BOLD');
+        if (shippingEl) {
+            const shipText = shippingEl.innerText.toLowerCase();
+            if (!shipText.includes('free')) {
+                const shipMatch = shipText.replace(/,/g, "").match(/[\d.]+/);
+                if (shipMatch) shippingCost = parseFloat(shipMatch[0]);
+            }
+        }
+        const totalCost = listedPrice + shippingCost;
 
-    overlay.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #1e293b; padding-bottom:6px;">
-            <span style="color:#10b981; font-weight:700; font-size:13px;">🔮 Mirror Pool Scout</span>
-            <span id="mp-deal-grade" style="background:#1e293b; color:#94a3b8; font-weight:700; padding:2px 6px; border-radius:4px; font-size:11px;">EVAL</span>
-        </div>
-        <div style="margin-bottom:6px; color:#94a3b8;">Target: <strong style="color:#38bdf8;">${cardName}</strong></div>
-        <div id="mp-metrics-box" style="background:#030712; border-radius:6px; padding:8px; margin-bottom:10px;">
-            <div style="color:#64748b;">Querying Scryfall API...</div>
-        </div>
-        <div style="display:flex; gap:8px;">
-            <button id="mp-bookmark-btn" style="flex:1; background:#2563eb; color:#fff; border:none; padding:7px 10px; border-radius:5px; font-weight:600; cursor:pointer;">+ Bookmark</button>
-            <button id="mp-dash-btn" style="flex:1; background:#1e293b; color:#e2e8f0; border:1px solid #334155; padding:7px 10px; border-radius:5px; font-weight:600; cursor:pointer;">Open Dashboard</button>
-        </div>
-    `;
-    document.body.appendChild(overlay);
+        const bidCountEl = document.querySelector(".x-bid-count");
+        const bidCount = bidCountEl ? parseInt(bidCountEl.innerText.replace(/\D/g, ""), 10) || 0 : 0;
+        const isAuction = bidCountEl !== null || document.body.innerText.includes("Current bid:");
 
-    // 4. Query Scryfall Background Engine
-    chrome.runtime.sendMessage({ action: "fetchComps", cardName: cardName }, (response) => {
-        const metricsBox = document.getElementById("mp-metrics-box");
-        const gradeBadge = document.getElementById("mp-deal-grade");
+        let watchers = 0;
+        const watchMatch = document.body.innerText.match(/(\d+)\s+(?:people are|person is) watching/i) || 
+                           document.body.innerText.match(/(\d+)\s+watchers?/i);
+        if (watchMatch) watchers = parseInt(watchMatch[1]);
 
-        if (response && response.success) {
-            const paperFloor = parseFloat(response.prices.usd) || 0;
-            const mtgoTix = parseFloat(response.prices.tix) || 0;
-            const mtgoUsd = mtgoTix * 0.92;
+        const timerEl = document.querySelector(".ux-timer") || document.querySelector(".x-end-time");
+        let timeLeft = isAuction ? "Ending Soon" : "Buy It Now";
+        if (timerEl) {
+            const timeStr = timerEl.innerText.replace(/Ends\s*in/i, "").replace(/Ends/i, "").trim();
+            const timeMatch = timeStr.match(/(\d+d\s+\d+h|\d+h\s+\d+m|\d+m\s+\d+s)/);
+            timeLeft = timeMatch ? timeMatch[0] : timeStr.split(/Today|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/i)[0].trim();
+        }
 
-            // Deal & Arbitrage Grade Calculation
-            let grade = "C";
-            let gradeBg = "#f59e0b";
-            let diffPercent = 0;
-            if (paperFloor > 0 && ebayPrice > 0) {
-                diffPercent = ((paperFloor - ebayPrice) / paperFloor) * 100;
-                if (diffPercent >= 20) { grade = "A+ (Steal)"; gradeBg = "#10b981"; }
-                else if (diffPercent >= 10) { grade = "A (Discount)"; gradeBg = "#059669"; }
-                else if (diffPercent >= -5) { grade = "B (Fair Market)"; gradeBg = "#3b82f6"; }
-                else { grade = "Overpriced"; gradeBg = "#ef4444"; }
+        // 3. Inject Inspector Badge
+        const badge = document.createElement("div");
+        badge.id = "mirrorpool-badge-root";
+        badge.style.cssText = "background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:12px; margin-top:14px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color:#f8fafc; box-shadow:0 10px 15px -3px rgba(0,0,0,0.5);";
+
+        badge.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #1e293b; padding-bottom:6px;">
+                <span style="color:#00ffcc; font-weight:800; font-size:12px; letter-spacing:0.5px;">◈ MIRROR POOL™ SCOUT</span>
+                <span style="font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase;">${isAuction ? "AUCTION TRACKER" : "FIXED LISTING"}</span>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; margin-bottom:8px; text-align:left;">
+                <div>
+                    <div style="font-size:9px; color:#8b949e; text-transform:uppercase;">${isAuction ? "Bid" : "Price"}</div>
+                    <div style="color:#00ffcc; font-size:13px; font-weight:700;">$${listedPrice.toFixed(2)}</div>
+                </div>
+                <div>
+                    <div style="font-size:9px; color:#8b949e; text-transform:uppercase;">Shipping</div>
+                    <div style="color:#8b949e; font-size:11px; font-weight:700;">${shippingCost === 0 ? 'Free' : '+$' + shippingCost.toFixed(2)}</div>
+                </div>
+                <div>
+                    <div style="font-size:9px; color:#8b949e; text-transform:uppercase;">Activity</div>
+                    <div style="color:#3fb950; font-size:11px; font-weight:700;">${bidCount}B / ${watchers}W</div>
+                </div>
+                <div>
+                    <div style="font-size:9px; color:#8b949e; text-transform:uppercase;">Time Left</div>
+                    <div style="color:#eab308; font-size:11px; font-weight:700;">${timeLeft}</div>
+                </div>
+            </div>
+            <div id="mp-deal-verdict-container">
+                <div style="font-size:11px; color:#64748b; padding:4px 0;">⏳ Querying Scryfall API benchmarks...</div>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button id="mp-btn-save" style="flex:1; padding:7px; border-radius:4px; background:#21262d; border:1px solid #30363d; color:#c9d1d9; font-weight:700; font-size:11px; cursor:pointer;">+ Bookmark</button>
+                <button id="mp-btn-dash" style="flex:1; padding:7px; border-radius:4px; background:rgba(0,255,204,0.06); border:1px solid #00ffcc; color:#00ffcc; font-weight:700; font-size:11px; cursor:pointer;">⛶ Open Dashboard</button>
+            </div>
+        `;
+
+        const targetParent = priceContainer.closest(".x-price-section") || priceContainer.parentElement;
+        targetParent.parentNode.insertBefore(badge, targetParent.nextSibling);
+
+        let trueMarketFloor = "N/A";
+
+        // 4. Query Background Scryfall Engine
+        chrome.runtime.sendMessage({ action: "fetchComps", cardName: searchTitle }, (res) => {
+            const verdictContainer = badge.querySelector('#mp-deal-verdict-container');
+            if (!res || !res.found) {
+                verdictContainer.innerHTML = `
+                    <div style="background:rgba(218,54,51,0.1); border:1px solid #da3633; color:#ff7b72; padding:6px; border-radius:4px; font-size:11px; text-align:center;">
+                        ⚠️ API Query Failed: Could not extract exact card name.
+                    </div>`;
+                return;
             }
 
-            if (gradeBadge) {
-                gradeBadge.innerText = grade;
-                gradeBadge.style.background = gradeBg;
-                gradeBadge.style.color = "#ffffff";
-            }
+            const rawMarketPrice = parseFloat(res.prices ? res.prices.usd : res.usd) || 0;
+            const tcgShipping = rawMarketPrice >= 50.00 ? 0.00 : 1.22;
+            trueMarketFloor = (rawMarketPrice + tcgShipping).toFixed(2);
+            const discountPct = ((parseFloat(trueMarketFloor) - totalCost) / parseFloat(trueMarketFloor)) * 100;
 
-            metricsBox.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                    <span style="color:#94a3b8;">eBay Price:</span>
-                    <strong style="color:#f8fafc;">$${ebayPrice.toFixed(2)}</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                    <span style="color:#94a3b8;">Paper Floor:</span>
-                    <strong style="color:#10b981;">$${paperFloor ? paperFloor.toFixed(2) : "N/A"}</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                    <span style="color:#94a3b8;">MTGO TIX:</span>
-                    <strong style="color:#38bdf8;">${mtgoTix ? mtgoTix.toFixed(2) : "N/A"} ($${mtgoUsd.toFixed(2)})</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between; border-top:1px dashed #1e293b; padding-top:4px;">
-                    <span style="color:#94a3b8;">Arbitrage Margin:</span>
-                    <strong style="color:${diffPercent >= 0 ? '#10b981' : '#ef4444'};">${diffPercent.toFixed(1)}%</strong>
+            let dealBanner = '';
+            if (discountPct >= 20) dealBanner = `<div style="background:#238636; color:#fff; padding:5px; text-align:center; border-radius:4px; font-weight:700; font-size:11px; margin-bottom:6px;">🔥 S-TIER DEAL: ${discountPct.toFixed(0)}% UNDER MARKET</div>`;
+            else if (discountPct >= 5) dealBanner = `<div style="background:#1f6feb; color:#fff; padding:5px; text-align:center; border-radius:4px; font-weight:700; font-size:11px; margin-bottom:6px;">✅ GOOD DEAL: ${discountPct.toFixed(0)}% UNDER MARKET</div>`;
+            else if (discountPct >= -5) dealBanner = `<div style="background:#eab308; color:#000; padding:5px; text-align:center; border-radius:4px; font-weight:700; font-size:11px; margin-bottom:6px;">⚖️ FAIR MARKET VALUE</div>`;
+            else dealBanner = `<div style="background:#da3633; color:#fff; padding:5px; text-align:center; border-radius:4px; font-weight:700; font-size:11px; margin-bottom:6px;">⚠️ OVERPRICED: ${Math.abs(discountPct).toFixed(0)}% OVER MARKET</div>`;
+
+            verdictContainer.innerHTML = `
+                ${dealBanner}
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:#8b949e; border-top:1px solid #1e293b; padding-top:4px;">
+                    <span>Scryfall Floor: <strong style="color:#00ffcc;">$${trueMarketFloor}</strong></span>
+                    <span>MTGO: <strong style="color:#38bdf8;">${res.prices ? res.prices.tix : 'N/A'} TIX</strong></span>
                 </div>
             `;
+        });
 
-            // Setup Bookmark Button payload
-            const bookmarkBtn = document.getElementById("mp-bookmark-btn");
-            bookmarkBtn.onclick = () => {
-                bookmarkBtn.innerText = "✅ Saved!";
-                bookmarkBtn.style.background = "#10b981";
+        // 5. Button Listeners
+        document.getElementById("mp-btn-dash").addEventListener("click", () => {
+            chrome.runtime.sendMessage({ action: "openDashboard" });
+        });
 
-                chrome.runtime.sendMessage({
-                    action: "sync_to_dashboard",
-                    payload: {
-                        actionType: "tcg_product",
-                        cardName: cardName,
-                        ebayPrice: ebayPrice.toFixed(2),
-                        paperFloor: paperFloor.toFixed(2),
-                        mtgoTix: mtgoTix.toFixed(2),
-                        arbitrageMargin: diffPercent.toFixed(1) + "%",
-                        dealGrade: grade,
-                        metaStaple: "Commander / Multi-Format Flex",
-                        url: window.location.href,
-                        timestamp: new Date().toLocaleDateString()
-                    }
-                });
-
-                setTimeout(() => {
-                    bookmarkBtn.innerText = "+ Bookmark";
-                    bookmarkBtn.style.background = "#2563eb";
-                }, 2000);
+        const saveBtn = document.getElementById("mp-btn-save");
+        saveBtn.addEventListener("click", () => {
+            const cardRecord = {
+                title: searchTitle,
+                price: totalCost.toFixed(2),
+                bidders: bidCount,
+                watchers: watchers,
+                timeLeft: timeLeft,
+                marketFloor: trueMarketFloor,
+                url: window.location.href,
+                savedAt: Date.now()
             };
-        } else {
-            metricsBox.innerHTML = `<span style="color:#ef4444;">Could not find match on Scryfall.</span>`;
-        }
-    });
 
-    document.getElementById("mp-dash-btn").onclick = () => {
-        chrome.runtime.sendMessage({ action: "openDashboard" });
-    };
-}
+            chrome.storage.local.get({ watchlist: [] }, (res) => {
+                const updated = [cardRecord, ...res.watchlist.filter(x => x.title !== cardRecord.title)];
+                chrome.storage.local.set({ watchlist: updated }, () => {
+                    saveBtn.innerText = "✓ Bookmarked";
+                    saveBtn.style.borderColor = "#10b981";
+                    saveBtn.style.color = "#10b981";
+                });
+            });
+        });
+    }
 
-setTimeout(initScoutOverlay, 1000);
+    setTimeout(initScoutBadge, 1200);
+})();
