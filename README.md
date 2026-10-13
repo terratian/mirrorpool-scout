@@ -8,9 +8,12 @@
 * **Financial Tracking:** Monitor your market floor, total spent, and net variance in real time.
 * **Data Sovereignty:** All watchlist and financial data is stored securely offline in your browser's local storage.
 
-## Get the Extension
-Support the development and get the official packaged release, complete with updates and seamless installation:
-👉 **[Download Mirror Pool Scout on Gumroad](YOUR_GUMROAD_LINK_HERE)**
+## The Developer Behind the Tool
+Mirror Pool is a one-man operation. I am a single dad building this out of North Carolina between gig jobs because I needed a better way to hunt down cards and manage procurement. This is a passion project built entirely from the ground up. 
+
+If this tool saves you time, helps you snipe better deals, or makes your MTG trading smoother, picking up a copy directly supports my family and allows me to keep building and improving this extension. Every bit of support genuinely means the world.
+
+👉 **[Support the Project & Download on Gumroad](YOUR_GUMROAD_LINK_HERE)**
 
 ## Installation & Usage
 1. Purchase and download the release ZIP from Gumroad.
