@@ -1,89 +1,68 @@
-// Enable side panel behavior on extension icon click
-try {
-    
-} catch (e) {
-    console.error("Side panel behavior error:", e);
-}
+// Mirror Pool Scout Service Worker
 
-// Listen for messages from content scripts / domain adapters
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "sync_to_dashboard") {
-        const payload = message.payload;
-        
-        if (!payload) {
-            sendResponse({ status: "error", message: "Empty payload received" });
-            return;
-        }
-
-        let dataStoreKey = "general_scout_logs";
-
-        switch (payload.actionType) {
-            case "goldfish_card":
-                dataStoreKey = "watchlist_cards";
-                break;
-            case "tcg_product":
-                dataStoreKey = "card_chase";
-                break;
-            case "decklist_scrape":
-                dataStoreKey = "currentDecklist";
-                break;
-            default:
-                dataStoreKey = "general_scout_logs";
-        }
-
-        chrome.storage.local.get([dataStoreKey], (result) => {
-            let existingData = result[dataStoreKey] || [];
-            if (!Array.isArray(existingData)) existingData = [existingData];
-            
-            existingData.unshift(payload);
-
-            chrome.storage.local.set({ [dataStoreKey]: existingData }, () => {
-                sendResponse({ status: "success", storedKey: dataStoreKey });
-            });
-        });
-
-        return true; 
-    }
-});
-
-// --- Legacy UI Button Listeners ---
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "openDashboard") {
-        // Check if Side Panel API is available, otherwise fallback to standard tab
-        if (chrome.sidePanel && sender.tab) {
-            chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
-        } else {
-            chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
-        }
-        sendResponse({ status: "dashboard_opened" });
-    }
-});
-
+// 1. Direct Icon Click -> Open Dashboard in New Tab
 chrome.action.onClicked.addListener((tab) => {
     chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
 });
 
-// --- Mirror Pool API Engine (Scryfall) ---
+// 2. Runtime Message Dispatcher
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // Open Dashboard action triggered from overlay widget
+    if (request.action === "openDashboard") {
+        chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
+        sendResponse({ status: "dashboard_opened" });
+        return true;
+    }
+
+    // Cross-domain data migration to storage
+    if (request.action === "sync_to_dashboard") {
+        const payload = request.payload;
+        if (!payload) {
+            sendResponse({ status: "error", message: "Empty payload received" });
+            return;
+        }
+        let dataStoreKey = "general_scout_logs";
+        switch (payload.actionType) {
+            case "goldfish_card": dataStoreKey = "watchlist_cards"; break;
+            case "tcg_product": dataStoreKey = "card_chase"; break;
+            case "decklist_scrape": dataStoreKey = "currentDecklist"; break;
+            default: dataStoreKey = "general_scout_logs";
+        }
+        chrome.storage.local.get([dataStoreKey], (result) => {
+            let existing = result[dataStoreKey] || [];
+            if (!Array.isArray(existing)) existing = [existing];
+            existing.unshift(payload);
+            chrome.storage.local.set({ [dataStoreKey]: existing }, () => {
+                sendResponse({ status: "success", storedKey: dataStoreKey });
+            });
+        });
+        return true;
+    }
+
+    // Scryfall Comps & Pricing Engine
     if (request.action === "fetchComps") {
-        const query = encodeURIComponent(request.searchTitle || request.cardName || "");
-        fetch(`https://api.scryfall.com/cards/named?fuzzy=${query}`)
-            .then(response => response.json())
+        const cardQuery = encodeURIComponent(request.searchTitle || request.cardName || "");
+        fetch(`https://api.scryfall.com/cards/named?fuzzy=${cardQuery}`)
+            .then(res => res.json())
             .then(data => {
                 if (data.object === "card") {
-                    sendResponse({ 
-                        success: true, 
+                    sendResponse({
+                        success: true,
+                        found: true,
                         name: data.name,
                         prices: {
-                            paper: data.prices.usd || "N/A",
-                            mtgo: data.prices.tix || "N/A"
+                            usd: data.prices.usd || "N/A",
+                            usd_foil: data.prices.usd_foil || "N/A",
+                            tix: data.prices.tix || "N/A"
                         }
                     });
                 } else {
-                    sendResponse({ success: false, error: "Not found in API" });
+                    sendResponse({ success: false, found: false, error: data.details || "Card not found" });
                 }
             })
-            .catch(err => sendResponse({ success: false, error: err.toString() }));
-        return true; // keep the channel open for async fetch
+            .catch(err => {
+                sendResponse({ success: false, found: false, error: err.toString() });
+            });
+        return true;
     }
 });

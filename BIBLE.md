@@ -50,3 +50,9 @@
 ## 5. Critical Restorations (October 2026)
 * **UI Taxonomy:** Restored full dashboard.html/js from commit 1db4cfb to rescue the Arbitrage Engine and Card Chase UI.
 * **API Engine:** Re-implemented the `fetchComps` Scryfall API listener in `background.js` to restore TCG pricing and metrics.
+
+## 6. Stability Patch & Overlay Restoration (October 2026)
+* **Tab Routing Fixed:** Purged `default_popup` from `manifest.json` to allow `chrome.action.onClicked` in `background.js` to reliably create full `dashboard.html` tabs.
+* **Widget Button Connection:** Implemented unconditional `openDashboard` handler in `background.js` to open `dashboard.html` when triggered from the eBay overlay.
+* **Scryfall Engine Active:** Re-established `fetchComps` message listener in service worker with fuzzy search endpoint.
+* **Title Sanitizer:** Enhanced `content.src.js` regex to strip set prefixes (`COMMANDER: BLOOMBURROW`), collector codes (`BLC #20`), and condition strings (`EN NF NM`) before querying pricing.

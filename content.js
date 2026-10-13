@@ -94,6 +94,20 @@ let trueMarketFloor = "N/A";
         // Fallback cleanup
         searchTitle = searchTitle.replace(/^(MTG|Magic: The Gathering|NM|LP|MP|HP|Foil)\s*[-|:]?\s*/ig, "").replace(/\[.*?\]/g, "").split("-")[0].trim();
     }
+    
+    // Clean eBay title for Scryfall matching
+    let cleanTitle = searchTitle;
+    // Strip common prefixes
+    cleanTitle = cleanTitle.replace(/^MTG\s*(COMMANDER:?\s*)?/i, "");
+    cleanTitle = cleanTitle.replace(/^(Magic:?\s*The\s*Gathering|NM|LP|MP|HP|Foil|Pre-Owned)\s*[-|:]?\s*/ig, "");
+    // Strip set tags like BLOOMBURROW, DUSKMOURN, SECRETS OF STRIXHAVEN
+    cleanTitle = cleanTitle.replace(/^[A-Z0-9\s]+:\s*/i, "");
+    // Strip trailing set codes, collector numbers, conditions: e.g. BLC #20 EN NF NM
+    cleanTitle = cleanTitle.replace(/[A-Z0-9]{3,4}\s*#?\d+.*$/i, "");
+    cleanTitle = cleanTitle.replace(/\b(EN|NF|NM|LP|Foil|Non-Foil|Borderless|Showcase|Extended Art)\b.*/ig, "");
+    cleanTitle = cleanTitle.replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").trim();
+    if (cleanTitle.length > 2) searchTitle = cleanTitle;
+
     chrome.runtime.sendMessage({ action: "fetchComps"
 , cardTitle: searchTitle }, (res) => {
   const verdictContainer = badge.querySelector('#mp-deal-verdict-container');
