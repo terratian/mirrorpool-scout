@@ -41,3 +41,28 @@ button:disabled { opacity: 0.5; cursor: not-allowed !important; }
     height: auto;
     filter: grayscale(100%);
 }
+
+/* Support CTA Banner */
+.support-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #0b1120; /* Matches deep dark background */
+    color: #94a3b8;
+    text-align: center;
+    padding: 12px;
+    font-size: 14px;
+    border-top: 1px solid #1e293b;
+    z-index: 10000;
+}
+.support-banner a {
+    color: #10b981; /* MTG Green */
+    font-weight: bold;
+    text-decoration: none;
+    margin-left: 5px;
+}
+.support-banner a:hover {
+    text-decoration: underline;
+    color: #34d399;
+}
