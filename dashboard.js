@@ -427,3 +427,12 @@ if (needed > 0) {
 
 return manifestLines.join("\n");
 }
+
+// Placeholder function for license verification
+function verifyLifetimeLicense(isValid) {
+    if (isValid) {
+        const watermark = document.getElementById('license-watermark');
+        if (watermark) watermark.style.display = 'none';
+        // Save state to chrome.storage.local here later
+    }
+}
