@@ -146,3 +146,12 @@ function updateMetricsHUD(metrics) {
 
 function getCachedPaperPrice(name) { return name.toLowerCase().includes("thoughtseize") ? 14.50 : 3.00; }
 function getCachedMtgoPrice(name) { return name.toLowerCase().includes("thoughtseize") ? 2.45 : 0.85; }
+
+// --- Mirror Pool Integration: Popup to Dashboard Sync ---
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && (changes.watchlist_cards || changes.card_chase)) {
+        console.log("New market data migrated from popup utility!");
+        // We will wire this to populate your existing "Card Chase" grid UI next.
+        // For now, reload the dashboard to fetch the latest storage state if needed.
+    }
+});
