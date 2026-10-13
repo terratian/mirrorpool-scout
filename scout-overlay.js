@@ -1,19 +1,13 @@
-// Create the host container
 const host = document.createElement("div");
 host.id = "mirror-pool-scout-host";
-// Pin it to the bottom right of the viewport
 host.style.position = "fixed";
 host.style.bottom = "20px";
 host.style.right = "20px";
-host.style.zIndex = "2147483647"; // Max z-index to stay above everything
+host.style.zIndex = "2147483647";
 document.body.appendChild(host);
 
-// Attach the Shadow DOM to isolate styles
 const shadow = host.attachShadow({ mode: "open" });
-
-// Build the overlay UI
-const container = document.createElement("div");
-container.innerHTML = `
+shadow.innerHTML = `
   <style>
     .scout-widget {
       background-color: #0b1120;
@@ -30,9 +24,6 @@ container.innerHTML = `
       font-weight: bold;
       font-size: 14px;
       margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
     }
     .scout-btn {
       width: 100%;
@@ -49,28 +40,18 @@ container.innerHTML = `
   </style>
   <div class="scout-widget">
     <div class="scout-header">🔮 Mirror Pool Scout</div>
-    <div style="font-size: 12px; margin-bottom: 8px;">Active on: ${window.location.hostname}</div>
+    <div style="font-size: 11px; margin-bottom: 8px;">Active: ${window.location.hostname}</div>
     <button class="scout-btn" id="send-to-dashboard">➕ Send to Dashboard</button>
   </div>
 `;
 
-shadow.appendChild(container);
-
-// Wire the button to send data to the Side Panel via message passing
-const sendBtn = shadow.getElementById("send-to-dashboard");
-sendBtn.addEventListener("click", () => {
-    sendBtn.innerText = "⏳ Syncing...";
+shadow.getElementById("send-to-dashboard").addEventListener("click", () => {
+    const btn = shadow.getElementById("send-to-dashboard");
+    btn.innerText = "✅ Sent!";
+    setTimeout(() => { btn.innerText = "➕ Send to Dashboard"; }, 2000);
     
-    // Scrape whatever specific page data is needed here based on the domain
-    const pageData = {
-        source: window.location.hostname,
-        url: window.location.href,
-        timestamp: Date.now()
-    };
-
-    // Fire the message to the background script / side panel
-    chrome.runtime.sendMessage({ action: "sync_to_dashboard", data: pageData }, (response) => {
-        sendBtn.innerText = "✅ Sent!";
-        setTimeout(() => { sendBtn.innerText = "➕ Send to Dashboard"; }, 2000);
+    chrome.runtime.sendMessage({
+        action: "sync_to_dashboard",
+        data: { url: window.location.href, title: document.title }
     });
 });
