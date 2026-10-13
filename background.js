@@ -1,6 +1,6 @@
 // Enable side panel behavior on extension icon click
 try {
-    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+    
 } catch (e) {
     console.error("Side panel behavior error:", e);
 }
@@ -57,4 +57,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
         sendResponse({ status: "dashboard_opened" });
     }
+});
+
+chrome.action.onClicked.addListener((tab) => {
+    chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
 });
