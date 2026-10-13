@@ -1,5 +1,9 @@
 // Enable side panel behavior on extension icon click
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
+try {
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+} catch (e) {
+    console.error("Side panel behavior error:", e);
+}
 
 // Listen for messages from content scripts / domain adapters
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -13,7 +17,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         let dataStoreKey = "general_scout_logs";
 
-        // Route handling based on adapter type
         switch (payload.actionType) {
             case "goldfish_card":
                 dataStoreKey = "watchlist_cards";
@@ -28,7 +31,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 dataStoreKey = "general_scout_logs";
         }
 
-        // Save into local storage for the Side Panel dashboard
         chrome.storage.local.get([dataStoreKey], (result) => {
             let existingData = result[dataStoreKey] || [];
             if (!Array.isArray(existingData)) existingData = [existingData];
@@ -36,12 +38,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             existingData.unshift(payload);
 
             chrome.storage.local.set({ [dataStoreKey]: existingData }, () => {
-                console.log(`[MPScout Router] Successfully logged item from ${payload.hostname || 'external site'}`);
                 sendResponse({ status: "success", storedKey: dataStoreKey });
             });
         });
 
-        // Required for asynchronous response handling in Chrome extensions
         return true; 
     }
 });
