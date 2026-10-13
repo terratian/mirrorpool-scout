@@ -1,90 +1,44 @@
-// Initialize Sentinel Polling
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.alarms.create("sentinel-radar", { periodInMinutes: 15 });
-});
+// Enable side panel behavior on extension icon click
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
 
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "sentinel-radar") {
-    executeSentinelRadar();
-  }
-});
-
-async function executeSentinelRadar() {
-  chrome.storage.local.get({ watchlist: [] }, async (res) => {
-    if (res.watchlist.length === 0) return;
-    
-    let stateChanged = false;
-    const evaluatedList = await Promise.all(res.watchlist.map(async (card) => {
-      if (!card.url.includes("ebay.com/itm")) return card;
-      
-      try {
-        // Fetch live auction DOM
-        const req = await fetch(card.url, { cache: "no-store" });
-        const html = await req.text();
+// Listen for messages from content scripts / domain adapters
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "sync_to_dashboard") {
+        const payload = message.payload;
         
-        // Extract live bid
-        const priceMatch = html.match(/"price":"([\d.]+)"/);
-        if (!priceMatch) return card;
-        
-        const livePrice = parseFloat(priceMatch[1]);
-        const previousPrice = parseFloat(card.price);
-        
-        // Fetch Live Market Floor
-        const query = encodeURIComponent(card.title);
-        const scryReq = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${query}`);
-        const scryData = await scryReq.json();
-        const marketFloor = parseFloat(scryData.prices?.usd || 0) + 1.22; // TCG + standard shipping
-        
-        if (livePrice !== previousPrice) {
-          card.price = livePrice.toFixed(2);
-          stateChanged = true;
+        if (!payload) {
+            sendResponse({ status: "error", message: "Empty payload received" });
+            return;
         }
 
-        // The Pivot Logic: If live bid > TCGPlayer Floor
-        if (marketFloor > 1.50 && livePrice > marketFloor) {
-          if (!card.pivotAlert) {
-            card.pivotAlert = true;
-            stateChanged = true;
-          }
-        } else {
-          if (card.pivotAlert) {
-            card.pivotAlert = false;
-            stateChanged = true;
-          }
+        // Route handling based on adapter type
+        switch (payload.actionType) {
+            dataStoreKey = "watchlist_cards";
+                break;
+            case "tcg_product":
+                dataStoreKey = "card_chase";
+                break;
+            case "decklist_scrape":
+                dataStoreKey = "currentDecklist";
+                break;
+            default:
+                dataStoreKey = "general_scout_logs";
         }
-      } catch (e) {
-        // Silently fail on network/fetch errors to prevent crashing the worker
-      }
-      return card;
-    }));
 
-    if (stateChanged) {
-      chrome.storage.local.set({ watchlist: evaluatedList });
-    }
-  });
-}
+        // Save into local storage for the Side Panel dashboard
+        chrome.storage.local.get([dataStoreKey], (result) => {
+            let existingData = result[dataStoreKey] || [];
+            if (!Array.isArray(existingData)) existingData = [existingData];
+            
+            existingData.unshift(payload);
 
-// Existing Dispatcher for the Content Script
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "fetchComps") {
-    const query = encodeURIComponent(request.cardTitle);
-    fetch(`https://api.scryfall.com/cards/named?fuzzy=${query}`)
-      .then(res => res.ok ? res.json() : Promise.reject("Not found"))
-      .then(data => {
-        sendResponse({
-          found: true,
-          usd: data.prices?.usd || "N/A",
-          tcg_url: data.purchase_uris?.tcgplayer || null,
-          eur: data.prices?.eur || "N/A",
-          cm_url: data.purchase_uris?.cardmarket || null
+            chrome.storage.local.set({ [dataStoreKey]: existingData }, () => {
+                console.log(`[MPScout Router] Successfully logged item from ${payload.hostname || 'external site'}`);
+                sendResponse({ status: "success", storedKey: dataStoreKey });
+            });
         });
-      }).catch(err => sendResponse({ found: false }));
-    return true;
-  }
-});
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-if (request.action === "openDashboard") {
-chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
-}
+        // Required for asynchronous response handling in Chrome extensions
+        return true; 
+    }
 });
