@@ -1,19 +1,33 @@
 // Mirror Pool Scout Service Worker
 
-// 1. Direct Icon Click -> Open Dashboard in New Tab
+// Helper: Focus existing dashboard tab or create a new one
+function focusOrCreateDashboard() {
+    const dashUrl = chrome.runtime.getURL("dashboard.html");
+    chrome.tabs.query({ url: dashUrl }, (tabs) => {
+        if (tabs.length > 0) {
+            chrome.tabs.update(tabs[0].id, { active: true });
+            chrome.windows.update(tabs[0].windowId, { focused: true });
+        } else {
+            chrome.tabs.create({ url: dashUrl });
+        }
+    });
+}
 
+// 1. Icon Click Listener
+chrome.action.onClicked.addListener(() => {
+    focusOrCreateDashboard();
 });
 
 // 2. Runtime Message Dispatcher
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    // Open Dashboard action triggered from overlay widget
+    // Open Dashboard action
     if (request.action === "openDashboard") {
-        chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
+        focusOrCreateDashboard();
         sendResponse({ status: "dashboard_opened" });
         return true;
     }
 
-    // Cross-domain data migration to storage
+    // Cross-domain data migration
     if (request.action === "sync_to_dashboard") {
         const payload = request.payload;
         if (!payload) {
@@ -38,7 +52,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
-    // Scryfall Comps & Pricing Engine
+    // Scryfall Comps API
     if (request.action === "fetchComps") {
         const cardQuery = encodeURIComponent(request.searchTitle || request.cardName || "");
         fetch(`https://api.scryfall.com/cards/named?fuzzy=${cardQuery}`)
@@ -64,28 +78,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
         return true;
     }
-});
-
-
-function focusOrCreateDashboard() {
-    const dashUrl = chrome.runtime.getURL("dashboard.html");
-    chrome.tabs.query({ url: dashUrl }, (tabs) => {
-        if (tabs.length > 0) {
-            chrome.tabs.update(tabs[0].id, { active: true });
-            chrome.windows.update(tabs[0].windowId, { focused: true });
-        } else {
-            chrome.tabs.create({ url: dashUrl });
-        }
-    });
-}
-
-chrome.action.onClicked.addListener(() => focusOrCreateDashboard());
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "openDashboard") {
-        focusOrCreateDashboard();
-        sendResponse({ status: "dashboard_opened" });
-        return true;
-    }
-
 });
