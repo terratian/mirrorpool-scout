@@ -56,3 +56,7 @@
 * **Widget Button Connection:** Implemented unconditional `openDashboard` handler in `background.js` to open `dashboard.html` when triggered from the eBay overlay.
 * **Scryfall Engine Active:** Re-established `fetchComps` message listener in service worker with fuzzy search endpoint.
 * **Title Sanitizer:** Enhanced `content.src.js` regex to strip set prefixes (`COMMANDER: BLOOMBURROW`), collector codes (`BLC #20`), and condition strings (`EN NF NM`) before querying pricing.
+
+## 7. Navigation & Extraction Stability (October 2026)
+* **Dashboard Navigation:** Implemented DOM-based tab router in `dashboard.js` to handle active states and view switching for left-pane buttons.
+* **eBay Extraction Protocol:** Shifted `content.src.js` away from raw title regex parsing. Scraper now prioritizes explicit `Card Name` properties within eBay's structured `.ux-labels-values__labels` item specifics table.

@@ -108,7 +108,29 @@ let trueMarketFloor = "N/A";
     cleanTitle = cleanTitle.replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").trim();
     if (cleanTitle.length > 2) searchTitle = cleanTitle;
 
-    chrome.runtime.sendMessage({ action: "fetchComps"
+    
+    // Smart eBay Data Extraction: Target Item Specifics Table
+    let structuredName = searchTitle;
+    const labels = document.querySelectorAll(".ux-labels-values__labels");
+    for (let label of labels) {
+        if (label.innerText.trim().toLowerCase() === "card name") {
+            const valueNode = label.nextElementSibling;
+            if (valueNode) {
+                structuredName = valueNode.innerText.trim();
+                break;
+            }
+        }
+    }
+    
+    // If structured data was found, override the raw title search
+    if (structuredName !== searchTitle && structuredName.length > 2) {
+        searchTitle = structuredName;
+    } else {
+        // Fallback basic cleanup if Item Specifics are missing
+        searchTitle = searchTitle.replace(/^(MTG|Magic:?\s*The\s*Gathering|NM|LP|MP|HP|Foil)\s*[-|:]?\s*/ig, "");
+        searchTitle = searchTitle.replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").trim();
+    }
+\n    chrome.runtime.sendMessage({ action: "fetchComps"
 , cardTitle: searchTitle }, (res) => {
   const verdictContainer = badge.querySelector('#mp-deal-verdict-container');
   

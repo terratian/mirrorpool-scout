@@ -146,3 +146,34 @@ function updateMetricsHUD(metrics) {
 
 function getCachedPaperPrice(name) { return name.toLowerCase().includes("thoughtseize") ? 14.50 : 3.00; }
 function getCachedMtgoPrice(name) { return name.toLowerCase().includes("thoughtseize") ? 2.45 : 0.85; }
+
+// --- Navigation Panel Router ---
+document.addEventListener("DOMContentLoaded", () => {
+    const navItems = document.querySelectorAll(".nav-item");
+    const headerTitle = document.querySelector(".header-title span");
+    const mainContentCards = document.querySelectorAll(".main-content .card");
+
+    navItems.forEach(item => {
+        item.addEventListener("click", (e) => {
+            e.preventDefault();
+            
+            // Remove active state from all buttons
+            navItems.forEach(nav => nav.classList.remove("active"));
+            
+            // Add active state to clicked button
+            e.currentTarget.classList.add("active");
+            
+            // Update header title to match navigation
+            const viewName = e.currentTarget.innerText.replace(/[^\w\s&]/g, '').trim();
+            if (headerTitle) headerTitle.innerText = viewName;
+            
+            // Basic view toggling (hides default cards if not on Watchlist)
+            if (viewName.includes("Watchlist") || viewName.includes("Live")) {
+                mainContentCards.forEach(card => card.style.display = card.id === "active-deck-panel" && !document.getElementById("hud-winrate").innerText ? "none" : "block");
+            } else {
+                mainContentCards.forEach(card => card.style.display = "none");
+                // Future implementation: Reveal specific panels for Arbitrage/Chase here
+            }
+        });
+    });
+});
