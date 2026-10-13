@@ -12,6 +12,9 @@ If you are interested in testing an early build, following the development, or w
 
 📩 **Contact / Early Access:** joshuasultan@gmail.com
 
+## Pricing & Licensing
+Mirror Pool Scout Standalone will be available for a **$9 Lifetime License**. This includes a unique, non-transferable license key that grants you permanent access to the extension and all future standalone updates. 
+
 ## Planned Features
 * **Live Market Procurement:** Custom UI overlay injected into marketplace listings for one-click card tracking.
 * **Intelligent Decklist Parsing:** Paste any MTG decklist to instantly generate a targeted, visual procurement grid.
