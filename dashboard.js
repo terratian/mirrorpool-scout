@@ -13,7 +13,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (importBtn) {
         importBtn.addEventListener("click", () => {
             importBtn.innerText = "⏳ Scanning...";
-            chrome.tabs.query({active: true, lastFocusedWindow: true}, (tabs) => {
+            chrome.tabs.query({url: ["*://*.mtgdecks.net/*", "*://*.ebay.com/*"]}, (tabs) => {
+    if (!tabs || tabs.length === 0) { alert("No MTGDecks or eBay tab found. Please open the target site in a normal tab."); return; }
                 if (tabs[0].url.includes("mtgdecks.net") || tabs[0].url.includes("magic.gg") || tabs[0].url.includes("wizards.com")) {
                     if (!tabs || !tabs[0]) { 
         alert("No target tab found. Please click the window containing the MTG listing first."); 
