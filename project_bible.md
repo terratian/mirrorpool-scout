@@ -27,3 +27,9 @@
 - A local script will periodically inspect `mtgdecks.net` and `magic.gg` for the presence of the specific DOM classes used by `mtgdecks-scraper.js`.
 - If a target site updates its UI, the script flags the break. 
 - The developer updates the extension locally, pushes a new build, and issues an update notification to the user base.
+
+## Phase 2.5: Cross-Platform Arbitrage Engine
+**Objective:** Programmatically compute paper vs. digital spreads within the side panel HUD.
+**Execution:** 
+- Iterates over stored decklists to map single card lookup values against localized currency conversions (TIX to USD factor).
+- Exposes net financial delta directly inside the active deck management interface for quick procurement and redemption tracking.
