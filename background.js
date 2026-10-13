@@ -11,9 +11,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return;
         }
 
+        let dataStoreKey = "general_scout_logs";
+
         // Route handling based on adapter type
         switch (payload.actionType) {
-            dataStoreKey = "watchlist_cards";
+            case "goldfish_card":
+                dataStoreKey = "watchlist_cards";
                 break;
             case "tcg_product":
                 dataStoreKey = "card_chase";
