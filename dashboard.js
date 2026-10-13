@@ -484,3 +484,75 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
+document.addEventListener("DOMContentLoaded", () => {
+    const mtgaBtn = document.getElementById("export-mtga-btn");
+    const loadBrewBtn = document.getElementById("load-brew-btn");
+    const manualInput = document.getElementById("manual-deck-input");
+    const metaTagsInput = document.getElementById("meta-tags-input");
+    const activeDeckPanel = document.getElementById("active-deck-panel");
+
+    // Handle MTGA Format Export
+    if (mtgaBtn) {
+        mtgaBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            chrome.storage.local.get("currentDecklist", (result) => {
+                const list = result.currentDecklist;
+                if (!list || list.length === 0) {
+                    alert("No decklist loaded.");
+                    return;
+                }
+                
+                // MTGA Format: '4 Thoughtseize' (No 'x')
+                let mtgaText = "";
+                list.forEach(card => { mtgaText += `${card.quantity} ${card.cardName}\n`; });
+                
+                navigator.clipboard.writeText(mtgaText).then(() => {
+                    const originalText = mtgaBtn.innerText;
+                    mtgaBtn.innerText = "✅ Copied for Arena!";
+                    mtgaBtn.style.color = "#10b981";
+                    setTimeout(() => { 
+                        mtgaBtn.innerText = originalText; 
+                        mtgaBtn.style.color = "";
+                    }, 3000);
+                });
+            });
+        });
+    }
+
+    // Handle Manual Brew Loading
+    if (loadBrewBtn) {
+        loadBrewBtn.addEventListener("click", () => {
+            const rawText = manualInput.value.trim();
+            if (!rawText) return;
+
+            const lines = rawText.split("\n");
+            const decklist = [];
+
+            lines.forEach(line => {
+                // Matches "4 Card Name" or "4x Card Name"
+                const match = line.trim().match(/^(\d+)[xX]?\s+(.+)$/);
+                if (match) {
+                    decklist.push({
+                        quantity: parseInt(match[1], 10),
+                        cardName: match[2].trim()
+                    });
+                }
+            });
+
+            if (decklist.length > 0) {
+                chrome.storage.local.set({ 
+                    currentDecklist: decklist,
+                    currentMetaTags: metaTagsInput.value.trim()
+                }, () => {
+                    loadBrewBtn.innerText = "✅ Brew Loaded";
+                    activeDeckPanel.style.display = "block";
+                    setTimeout(() => { loadBrewBtn.innerText = "🛠️ Load Brew"; }, 3000);
+                    // Here you would also trigger the Card Chase grid to refresh with the new data
+                });
+            } else {
+                alert("Could not parse cards. Use format: '4 Card Name'");
+            }
+        });
+    }
+});
