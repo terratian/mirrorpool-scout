@@ -10,32 +10,63 @@ host.style.zIndex = "2147483647";
 document.body.appendChild(host);
 
 const shadow = host.attachShadow({ mode: "open" });
+const hostname = window.location.hostname;
 
-function extractPageData() {
-    let cardName = "Unknown Card";
-    let paperPrice = "N/A";
-    let mtgoPrice = "N/A";
-    const hostname = window.location.hostname;
+function detectDomainProfile() {
+    let profile = {
+        name: "Generic TCG Scout",
+        primaryLabel: "📥 Push to Watchlist",
+        secondaryLabel: "📋 Copy Spread Data",
+        cardName: document.title.split("|")[0].trim(),
+        metricA: "Page URL",
+        metricB: window.location.href,
+        actionType: "watchlist"
+    };
 
     if (hostname.includes("mtggoldfish.com")) {
-        // Target exact card header element, ignoring footers and legal text
         const headerEl = document.querySelector(".card-name-header h1, h1");
-        if (headerEl) {
-            cardName = headerEl.innerText.split("#")[0].replace("Price", "").trim();
-        }
-        
-        // Target price elements specifically
+        let cardName = headerEl ? headerEl.innerText.split("#")[0].replace("Price", "").trim() : "Unknown Card";
         const tabletopEl = document.querySelector(".tweak-price-tabletop, .price-box-price");
-        if (tabletopEl) paperPrice = tabletopEl.innerText.trim();
-
         const mtgoEl = document.querySelector(".tweak-price-mtgo");
-        if (mtgoEl) mtgoPrice = mtgoEl.innerText.trim();
+        
+        profile = {
+            name: "MTGGoldfish Inspector",
+            primaryLabel: "📥 Push to Watchlist",
+            secondaryLabel: "⚡ Export Arbitrage Delta",
+            cardName: cardName,
+            metricA: "Paper Floor",
+            metricB: tabletopEl ? tabletopEl.innerText.trim() : "N/A",
+            metricC: mtgoEl ? mtgoEl.innerText.trim() + " TIX" : "N/A",
+            actionType: "goldfish_card"
+        };
+    } else if (hostname.includes("tcgplayer.com")) {
+        const titleEl = document.querySelector(".product-details__name");
+        const priceEl = document.querySelector(".product-details__price");
+        
+        profile = {
+            name: "TCGplayer Marketplace",
+            primaryLabel: "🎯 Add to Card Chase",
+            secondaryLabel: "📋 Copy Direct-Buy Specs",
+            cardName: titleEl ? titleEl.innerText.trim() : "TCG Product",
+            metricA: "Market Price",
+            metricB: priceEl ? priceEl.innerText.trim() : "N/A",
+            actionType: "tcg_product"
+        };
+    } else if (hostname.includes("mtgdecks.net")) {
+        profile = {
+            name: "MTGDecks Analyzer",
+            primaryLabel: "🛠️ Scrape & Compute Spreads",
+            secondaryLabel: "🎮 Export MTGA Format",
+            cardName: "Active Decklist",
+            metricA: "Detected Format",
+            metricB: "Competitive Standard/Modern",
+            actionType: "decklist_scrape"
+        };
     }
-
-    return { cardName, paperPrice, mtgoPrice, url: window.location.href, hostname };
+    return profile;
 }
 
-const data = extractPageData();
+const data = detectDomainProfile();
 
 shadow.innerHTML = `
   <style>
@@ -44,7 +75,7 @@ shadow.innerHTML = `
       border: 1px solid #334155;
       border-radius: 8px;
       padding: 12px;
-      width: 250px;
+      width: 260px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       color: #f8fafc;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7);
@@ -103,39 +134,38 @@ shadow.innerHTML = `
   </style>
   <div class="scout-widget">
     <div class="scout-header">
-      <span>🔮 MP SCOUT ENGINE</span>
-      <span style="color: #64748b; font-size: 9px;">${data.hostname}</span>
+      <span>🔮 ${data.name}</span>
     </div>
     <div class="card-inspect-box">
       <div style="color: #38bdf8; font-weight: 700; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${data.cardName}">${data.cardName}</div>
-      <div class="inspect-row"><span>Paper Floor:</span> <span style="color: #f59e0b;">${data.paperPrice}</span></div>
-      <div class="inspect-row"><span>MTGO TIX:</span> <span style="color: #3b82f6;">${data.mtgoPrice}</span></div>
+      <div class="inspect-row"><span>${data.metricA}:</span> <span style="color: #f59e0b;">${data.metricB}</span></div>
+      ${data.metricC ? `<div class="inspect-row"><span>MTGO TIX:</span> <span style="color: #3b82f6;">${data.metricC}</span></div>` : ''}
     </div>
     <div class="btn-group">
-      <button class="scout-btn" id="push-watchlist-btn">📥 Push to Watchlist</button>
-      <button class="scout-btn btn-secondary" id="copy-spread-btn">📋 Copy Spread Data</button>
+      <button class="scout-btn" id="primary-action-btn">${data.primaryLabel}</button>
+      <button class="scout-btn btn-secondary" id="secondary-action-btn">${data.secondaryLabel}</button>
     </div>
   </div>
 `;
 
-shadow.getElementById("push-watchlist-btn").addEventListener("click", () => {
-    const btn = shadow.getElementById("push-watchlist-btn");
-    btn.innerText = "✅ Synced!";
+shadow.getElementById("primary-action-btn").addEventListener("click", () => {
+    const btn = shadow.getElementById("primary-action-btn");
+    btn.innerText = "✅ Data Captured!";
     btn.style.backgroundColor = "#10b981";
     
-    chrome.runtime.sendMessage({ action: "sync_to_dashboard", cardData: data });
+    chrome.runtime.sendMessage({ action: "sync_to_dashboard", payload: data });
 
     setTimeout(() => { 
-        btn.innerText = "📥 Push to Watchlist"; 
+        btn.innerText = data.primaryLabel; 
         btn.style.backgroundColor = "#3b82f6";
     }, 2000);
 });
 
-shadow.getElementById("copy-spread-btn").addEventListener("click", () => {
-    const btn = shadow.getElementById("copy-spread-btn");
-    const textToCopy = `Card: ${data.cardName} | Paper: ${data.paperPrice} | MTGO: ${data.mtgoPrice} | Source: ${data.url}`;
-    navigator.clipboard.writeText(textToCopy).then(() => {
-        btn.innerText = "✅ Copied Spreads!";
-        setTimeout(() => { btn.innerText = "📋 Copy Spread Data"; }, 2000);
+shadow.getElementById("secondary-action-btn").addEventListener("click", () => {
+    const btn = shadow.getElementById("secondary-action-btn");
+    const exportText = `[MPScout Export] ${data.cardName} | ${data.metricA}: ${data.metricB} | ${window.location.href}`;
+    navigator.clipboard.writeText(exportText).then(() => {
+        btn.innerText = "✅ Copied to Clipboard!";
+        setTimeout(() => { btn.innerText = data.secondaryLabel; }, 2000);
     });
 });
