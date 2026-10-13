@@ -46,3 +46,7 @@
 ## 4. Roadmap & Future Architecture
 * **Phase 2 (DOM Inspector):** Lightweight automated health-check script to detect when target site class names change, prompting local scraper updates.
 * **Phase 3 (Proxmox / Suite Backend):** Transition client-side scraping to a server-backed FastAPI backend deployed on Proxmox, backed by a SQLite/PostgreSQL Scryfall bulk data registry.
+
+## 5. Critical Restorations (October 2026)
+* **UI Taxonomy:** Restored full dashboard.html/js from commit 1db4cfb to rescue the Arbitrage Engine and Card Chase UI.
+* **API Engine:** Re-implemented the `fetchComps` Scryfall API listener in `background.js` to restore TCG pricing and metrics.

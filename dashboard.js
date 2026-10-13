@@ -13,15 +13,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (importBtn) {
         importBtn.addEventListener("click", () => {
             importBtn.innerText = "⏳ Scanning...";
-            chrome.tabs.query({url: ["*://*.mtgdecks.net/*", "*://*.ebay.com/*"]}, (tabs) => {
-    if (!tabs || tabs.length === 0) { alert("No MTGDecks or eBay tab found. Please open the target site in a normal tab."); return; }
+            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
                 if (tabs[0].url.includes("mtgdecks.net") || tabs[0].url.includes("magic.gg") || tabs[0].url.includes("wizards.com")) {
-                    if (!tabs || !tabs[0]) { 
-        alert("No target tab found. Please click the window containing the MTG listing first."); 
-        document.querySelector(".mp-btn").innerText = "Load & Analyze Brew"; // Reset button state
-        return; 
-    }
-    chrome.tabs.sendMessage(tabs[0].id, {action: "extract_deck"}, (response) => {
+                    chrome.tabs.sendMessage(tabs[0].id, {action: "extract_deck"}, (response) => {
                         if (response && response.status === "success") {
                             importBtn.innerText = "✅ Deck Imported";
                             activeDeckPanel.style.display = "block";
@@ -152,12 +146,3 @@ function updateMetricsHUD(metrics) {
 
 function getCachedPaperPrice(name) { return name.toLowerCase().includes("thoughtseize") ? 14.50 : 3.00; }
 function getCachedMtgoPrice(name) { return name.toLowerCase().includes("thoughtseize") ? 2.45 : 0.85; }
-
-// --- Mirror Pool Integration: Popup to Dashboard Sync ---
-chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && (changes.watchlist_cards || changes.card_chase)) {
-        console.log("New market data migrated from popup utility!");
-        // We will wire this to populate your existing "Card Chase" grid UI next.
-        // For now, reload the dashboard to fetch the latest storage state if needed.
-    }
-});

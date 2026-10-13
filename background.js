@@ -62,3 +62,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 chrome.action.onClicked.addListener((tab) => {
     chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
 });
+
+// --- Mirror Pool API Engine (Scryfall) ---
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "fetchComps") {
+        const query = encodeURIComponent(request.searchTitle || request.cardName || "");
+        fetch(`https://api.scryfall.com/cards/named?fuzzy=${query}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.object === "card") {
+                    sendResponse({ 
+                        success: true, 
+                        name: data.name,
+                        prices: {
+                            paper: data.prices.usd || "N/A",
+                            mtgo: data.prices.tix || "N/A"
+                        }
+                    });
+                } else {
+                    sendResponse({ success: false, error: "Not found in API" });
+                }
+            })
+            .catch(err => sendResponse({ success: false, error: err.toString() }));
+        return true; // keep the channel open for async fetch
+    }
+});
