@@ -436,3 +436,51 @@ function verifyLifetimeLicense(isValid) {
         // Save state to chrome.storage.local here later
     }
 }
+
+// DEV OVERRIDE: Hide watermark during local development
+verifyLifetimeLicense(true);
+
+// Export & Share Branding Logic
+document.addEventListener("DOMContentLoaded", () => {
+    const shareBtn = document.getElementById("share-deck-btn");
+    
+    if (shareBtn) {
+        shareBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            
+            // Fetch the currently loaded deck from local storage
+            chrome.storage.local.get("currentDecklist", (result) => {
+                const list = result.currentDecklist;
+                if (!list || list.length === 0) {
+                    alert("No decklist loaded to share.");
+                    return;
+                }
+
+                // Format the text for Discord / Reddit
+                let exportText = "🎯 **Target Procurement List**\n\n";
+                list.forEach(card => {
+                    exportText += `${card.quantity}x ${card.cardName}\n`;
+                });
+                
+                // The Viral Branded Footer
+                exportText += "\n---\n";
+                exportText += "🔮 *Scraped & Analyzed via Mirror Pool Scout*\n";
+                exportText += "🔗 Get the early access tool: [Your Gumroad Link Here]\n";
+
+                // Write to clipboard
+                navigator.clipboard.writeText(exportText).then(() => {
+                    const originalText = shareBtn.innerText;
+                    shareBtn.innerText = "✅ Copied to Clipboard!";
+                    shareBtn.style.color = "#10b981";
+                    
+                    setTimeout(() => { 
+                        shareBtn.innerText = originalText; 
+                        shareBtn.style.color = "";
+                    }, 3000);
+                }).catch(err => {
+                    console.error("Failed to copy text: ", err);
+                });
+            });
+        });
+    }
+});

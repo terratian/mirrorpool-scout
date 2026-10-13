@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Mirror Pool Sniper & Overwatch",
+  "name": "Mirror Pool Scout",
   "version": "1.2.0",
-  "description": "Cross-platform card auction sniper, extended bidding sentinel, and live comps radar",
+  "description": "Live MTG market procurement, visual decklist parsing, and financial tracking.",
   "permissions": [
     "storage",
     "activeTab",
@@ -10,7 +10,12 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Mirror Pool Scout"
+    "default_title": "Mirror Pool Scout",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
   },
   "host_permissions": [
     "*://*.ebay.com/*",
@@ -39,5 +44,11 @@
       ],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "short_name": "Scout",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
 }
