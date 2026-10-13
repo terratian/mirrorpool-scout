@@ -1,109 +1,253 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Mirror Pool Scout | Dashboard</title>
-  <link rel="stylesheet" href="dashboard.css">
+    <meta charset="UTF-8">
+    <title>Mirror Pool Scout</title>
+    <style>
+        :root {
+            --bg-base: #030712;
+            --bg-panel: #0b1120;
+            --bg-card: #1e293b;
+            --border-color: #334155;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-gold: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Left Navigation */
+        .sidebar {
+            width: 220px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+        }
+
+        .brand-logo {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--accent-green);
+            letter-spacing: 0.5px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-section {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            margin-top: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            margin-bottom: 4px;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        .nav-item.active {
+            border-left: 3px solid var(--accent-green);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Cards & Panels */
+        .card {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .metric-box {
+            background-color: var(--bg-card);
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* Buttons & Inputs */
+        textarea {
+            width: 100%;
+            height: 80px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-main);
+            padding: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            resize: none;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .btn {
+            width: 100%;
+            background-color: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 8px;
+        }
+
+        .btn:hover { background-color: #2563eb; }
+        .btn-green { background-color: var(--accent-green); color: #030712; }
+        .btn-green:hover { background-color: #059669; color: white; }
+
+        /* Footer */
+        .footer {
+            margin-top: auto;
+            font-size: 10px;
+            color: var(--text-muted);
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            padding-top: 12px;
+        }
+        .footer a { color: var(--accent-green); text-decoration: none; }
+    </style>
 </head>
 <body>
-  <div class="sidebar">
-    <div class="brand">◈ MIRROR POOL™</div>
-    <ul class="nav">
-      <li class="active" data-target="watchlist">Live Watchlist</li>
-      <li data-target="hunter">Procurement Hunter</li>
-      <li data-target="meta">Meta Analytics</li>
-      <li data-target="prefs">Preferences</li>
-    </ul>
-    <div class="status-box">
-      <div class="status-label">SUITE CONNECTION</div>
-      <div class="status-val" style="color:#eab308;">Standalone Mode</div>
-    </div>
-  </div>
-  
-  <div class="main-content">
-    <div class="header">
-      <h1 id="view-title">Procurement Hunter</h1>
-      <div class="stats-row" id="header-stats">
-        <div class="stat-card">Market Total: <span id="stat-market-total" style="color:#eab308;">$0.00</span></div>
-        <div class="stat-card">Total Spent: <span id="stat-spent-total" style="color:#00ffcc;">$0.00</span></div>
-        <div class="stat-card">Net Variance: <span id="stat-variance" style="color:#3fb950;">$0.00</span></div>
-      </div>
-    </div>
-    
-    <!-- Tab 1: Live Watchlist -->
-    <div id="view-watchlist" class="grid-container view-section" style="display:none;"></div>
 
-    <!-- Tab 2: Procurement Hunter -->
-    <div id="view-hunter" class="view-section" style="padding: 30px; overflow-y: auto;">
-      <div class="deck-manager-header" style="display:flex; justify-content:space-between; margin-bottom: 20px;">
-        <select id="deck-select" style="background:#21262d; color:#c9d1d9; border:1px solid #30363d; padding:8px; border-radius:4px; font-weight:bold; flex:1; margin-right:10px;">
-          <option value="new">+ Create New Decklist</option>
-        </select>
-        <button id="btn-delete-deck" style="background:none; border:1px solid #da3633; color:#da3633; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">Delete List</button>
-      </div>
-
-      <div style="background:#0d1117; padding:20px; border:1px solid #30363d; border-radius:6px; margin-bottom: 20px;">
-        <div style="display:flex; gap:15px; margin-bottom:15px;">
-          <div style="flex:2;">
-            <label style="display:block; font-size:11px; color:#8b949e; margin-bottom:5px;">Deck Name</label>
-            <input type="text" id="deck-name" placeholder="e.g. Dimir Rogues" style="width:100%; background:#21262d; border:1px solid #30363d; color:#fff; padding:8px; border-radius:4px;">
-          </div>
-          <div style="flex:1;">
-            <label style="display:block; font-size:11px; color:#8b949e; margin-bottom:5px;">Printing Target</label>
-            <select id="pref-printing" style="width:100%; background:#21262d; border:1px solid #30363d; color:#fff; padding:8px; border-radius:4px;">
-              <option value="Any">Any Printing</option>
-              <option value="Normal" selected>Normal Only</option>
-              <option value="Foil">Foil Only</option>
-            </select>
-          </div>
-          <div style="flex:1;">
-            <label style="display:block; font-size:11px; color:#8b949e; margin-bottom:5px;">Condition Floor</label>
-            <select id="pref-condition" style="width:100%; background:#21262d; border:1px solid #30363d; color:#fff; padding:8px; border-radius:4px;">
-              <option value="Any" selected>Any Condition</option>
-              <option value="Near Mint">Near Mint (NM)</option>
-              <option value="Lightly Played">Lightly Played (LP)</option>
-            </select>
-          </div>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div class="brand-logo">
+            🔮 MIRROR POOL
         </div>
-        <label style="display:block; font-size:11px; color:#8b949e; margin-bottom:5px;">Decklist (Format: "4 Brainstorm")</label>
-        <textarea id="deck-import-area" placeholder="Paste your list here..." style="width:100%; height:120px; background:#21262d; color:#c9d1d9; border:1px solid #30363d; padding:12px; border-radius:4px; font-family:monospace; resize:vertical; margin-bottom:15px; box-sizing: border-box;"></textarea>
-        
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div id="deck-save-status" style="color:#3fb950; font-size:12px; font-weight:bold;"></div>
-          <button id="btn-parse-deck" style="background:#238636; color:#fff; border:none; padding:10px 20px; border-radius:4px; font-weight:bold; cursor:pointer;">⚡ Save & Generate Procurement Sheet</button>
+
+        <div class="nav-section">Workspace</div>
+        <a href="#" class="nav-item active">📊 Live Watchlist</a>
+        <a href="#" class="nav-item">🎯 Procurement Hunter</a>
+        <a href="#" class="nav-item">⚖️ Arbitrage Desk</a>
+        <a href="#" class="nav-item">📈 Meta Analytics</a>
+
+        <div class="nav-section">Preferences</div>
+        <a href="#" class="nav-item">⚙️ Settings & API</a>
+
+        <div class="footer">
+            Alpha Build<br><a href="https://gumroad.com" target="_blank">Upgrade ($9 Lifetime)</a>
         </div>
-      </div>
-      <div id="hunter-results" class="grid-container" style="padding:0;"></div>
     </div>
 
-    <!-- Tab 3: Meta Analytics -->
-    <div id="view-meta" class="view-section" style="display:none; padding: 30px; overflow-y: auto;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-        <h2 style="margin:0; color:#00ffcc;">Global Meta Tracker</h2>
-        <select id="meta-format-select" style="background:#21262d; color:#c9d1d9; border:1px solid #30363d; padding:8px; border-radius:4px; font-weight:bold;">
-          <option value="Standard">Standard</option>
-          <option value="Pioneer">Pioneer</option>
-          <option value="Modern">Modern</option>
-          <option value="Commander">Commander</option>
-        </select>
-      </div>
-      <div id="meta-results-container" class="grid-container" style="padding:0; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"></div>
+    <!-- Main Workspace -->
+    <div class="main-content">
+        <div class="header-title">
+            <span>Live Watchlist & Portfolios</span>
+        </div>
+
+        <!-- Action / Scrape Controls -->
+        <div class="card">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Quick Deck Import & Brew</div>
+            <textarea id="manual-deck-input" placeholder="Paste decklist here (e.g. 4 Thoughtseize)..."></textarea>
+            <button class="btn btn-green" id="load-brew-btn">🛠️ Load & Analyze Brew</button>
+            <button class="btn" id="import-deck-btn">🌐 Scrape Active Tab (MTGDecks)</button>
+        </div>
+
+        <!-- Active Deck Panel / Metrics HUD -->
+        <div class="card" id="active-deck-panel" style="display: none;">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--accent-green);">Active Deck Metrics</div>
+            
+            <div class="metrics-grid">
+                <div class="metric-box">
+                    <div class="metric-label">Win Rate</div>
+                    <div class="metric-value" id="hud-winrate" style="color: var(--accent-green);">54.2%</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Paper Value</div>
+                    <div class="metric-value" id="hud-paper" style="color: var(--accent-gold);">$0.00</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">MTGO TIX</div>
+                    <div class="metric-value" id="hud-mtgo" style="color: var(--accent-blue);">0.0 TIX</div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button class="btn" id="share-deck-btn" style="margin-bottom: 0;">📋 Export List</button>
+                <button class="btn" id="export-mtga-btn" style="margin-bottom: 0; background-color: #334155;">🎮 Copy MTGA</button>
+            </div>
+        </div>
+
     </div>
 
-    <!-- Tab 4: Preferences -->
-    <div id="view-prefs" class="view-section" style="display:none; padding: 30px;">
-      <h2 style="color:#00ffcc; margin-top:0;">Global Extension Preferences</h2>
-      <p style="color:#8b949e;">Suite integration targets and API throttling configuration.</p>
-    </div>
-  </div>
-  <script src="dashboard.js"></script>
-    <!-- Unregistered Alpha Watermark -->
-    <div id="license-watermark" class="watermark-overlay">
-        <img src="mpsbanner1mb.png" alt="Mirror Pool Scout Brand">
-    </div>
-    <!-- Support CTA Banner -->
-    <div id="support-banner" class="support-banner">
-        <p><strong>Alpha Build:</strong> Feel free to use the app! Snag a <a href="#" target="_blank">$9 Lifetime Key</a> to remove the watermark and support an out-of-work solo developer building rad tools for all your TCG needs.</p>
-    </div>
+    <script src="dashboard.js"></script>
 </body>
 </html>
