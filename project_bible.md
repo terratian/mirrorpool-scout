@@ -14,3 +14,16 @@
 **Security:** Migrate proprietary scraping algorithms to a backend API to protect intellectual property.
 **Expansion:** Integrate Sports Cards and other major TCGs.
 **Distribution:** Official Chrome Web Store deployment.
+
+## Phase 3: Infrastructure & Maintenance (Proxmox / API)
+**Objective:** Transition from fragile client-side scraping to a robust, server-backed API architecture to support Mirror Pool Suite.
+**Hardware/Hosting:** Deploy a thin Proxmox container or lightweight cloud server to host the API and centralized database.
+**Data Silo:** Utilize the existing Mirror Pool SQLite database structure to ingest and index daily Scryfall bulk data, acting as the master card registry.
+**Server-Side Scraping:** Move DOM scraping off the client's browser and onto the server to prevent user IP rate-limiting and centralize metagame analytics (Win Rates, Meta %).
+
+## Alpha Maintenance Strategy: DOM Inspector
+**Objective:** Proactively monitor target sites for HTML structural changes that would break the client-side extension.
+**Execution:** 
+- A local script will periodically inspect `mtgdecks.net` and `magic.gg` for the presence of the specific DOM classes used by `mtgdecks-scraper.js`.
+- If a target site updates its UI, the script flags the break. 
+- The developer updates the extension locally, pushes a new build, and issues an update notification to the user base.
