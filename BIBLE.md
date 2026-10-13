@@ -60,3 +60,7 @@
 ## 7. Navigation & Extraction Stability (October 2026)
 * **Dashboard Navigation:** Implemented DOM-based tab router in `dashboard.js` to handle active states and view switching for left-pane buttons.
 * **eBay Extraction Protocol:** Shifted `content.src.js` away from raw title regex parsing. Scraper now prioritizes explicit `Card Name` properties within eBay's structured `.ux-labels-values__labels` item specifics table.
+
+## 8. Data Persistence & Overlay Rebuild (October 2026)
+* **eBay Overlay Injection:** Completely rebuilt `content.src.js` to ensure reliable DOM injection on eBay, parsing the exact card name from Item Specifics without causing ReferenceErrors.
+* **Procurement Hunter Sync:** Wired the widget's "Bookmark" button to `chrome.storage.local`, dynamically rendering saved eBay deals into the dashboard's "Card Chase" panel using `sync_to_dashboard`.

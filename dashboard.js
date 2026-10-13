@@ -177,3 +177,35 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 });
+
+// --- Render Bookmarked Cards ---
+function renderCardChase() {
+    chrome.storage.local.get(["card_chase"], (result) => {
+        const chaseData = result.card_chase || [];
+        // Target the Procurement Hunter container (assumes we append a grid if empty)
+        const cardsContainer = document.querySelectorAll(".main-content .card")[1]; 
+        if (!cardsContainer) return;
+        
+        if (chaseData.length === 0) {
+            cardsContainer.innerHTML = '<div style="font-size:13px; color:#94a3b8;">No tracked items yet. Bookmark cards from eBay to see them here.</div>';
+            return;
+        }
+        
+        cardsContainer.innerHTML = chaseData.map(item => `
+            <div style="background:#1e293b; padding:10px; border-radius:6px; margin-bottom:10px; border-left:3px solid #3b82f6;">
+                <div style="font-weight:bold; color:#f8fafc; margin-bottom:4px;">${item.cardName}</div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:#94a3b8;">
+                    <span>${item.metricA}: <span style="color:#10b981;">${item.valueA}</span></span>
+                    <a href="${item.url}" target="_blank" style="color:#3b82f6; text-decoration:none;">View Listing ↗</a>
+                </div>
+            </div>
+        `).join('');
+    });
+}
+
+document.addEventListener("DOMContentLoaded", renderCardChase);
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.card_chase) {
+        renderCardChase();
+    }
+});

@@ -1,200 +1,85 @@
-(() => {
-if (document.getElementById("mirrorpool-badge-root")) return;
+// Mirror Pool Scout - eBay Overlay Injector
 
-function initScoutBadge() {
-const priceContainer = document.querySelector(".x-price-primary") || document.querySelector(".x-bin-price") || document.querySelector(".x-bid-price");
-if (!priceContainer) return;
-
-const titleEl = document.querySelector(".x-item-title__mainTitle") || document.querySelector("h1");
-const rawTitle = titleEl ? titleEl.innerText.trim() : "Unknown Card";
-
-let searchTitle = rawTitle.replace(/\b(MTG|MAGIC THE GATHERING|MAGIC|COMMANDER|DUSKMOURN|BLOOMBURROW|LEGENDS|BALDUR'S GATE|NM|MINT|LP|SP|MP|HP|FOIL|NF|EN|ENGLISH|PSA|BGS|CGC|TCG|WOTC)\b/gi, '');
-searchTitle = searchTitle.replace(/\b[A-Z0-9]{3,4}\b/g, '');
-searchTitle = searchTitle.replace(/#\d+/g, '');
-searchTitle = searchTitle.replace(/[^a-zA-Z\s\-',]/g, ' ').replace(/\s+/g, ' ').trim();
-if (searchTitle.length < 3) searchTitle = rawTitle;
-
-const rawPriceText = priceContainer.innerText || "";
-const cleanPriceMatch = rawPriceText.replace(/,/g, "").match(/[\d.]+/);
-const listedPrice = cleanPriceMatch ? parseFloat(cleanPriceMatch[0]) : 0;
-
-let shippingCost = 0;
-const shippingEl = document.querySelector('.ux-labels-values--shipping') || document.querySelector('.sh-str') || document.querySelector('.ux-textspans--BOLD');
-if (shippingEl) {
-  const shipText = shippingEl.innerText.toLowerCase();
-  if (!shipText.includes('free')) {
-    const shipMatch = shipText.replace(/,/g, "").match(/[\d.]+/);
-    if (shipMatch) shippingCost = parseFloat(shipMatch[0]);
-  }
-}
-const totalCost = listedPrice + shippingCost;
-
-const bidCountEl = document.querySelector(".x-bid-count");
-const bidCount = bidCountEl ? parseInt(bidCountEl.innerText.replace(/\D/g, ""), 10) || 0 : 0;
-const isAuction = bidCountEl !== null || document.body.innerText.includes("Current bid:");
-
-let watchers = 0;
-const watchMatch = document.body.innerText.match(/(\d+)\s+(?:people are|person is) watching/i) || document.body.innerText.match(/(\d+)\s+watchers?/i);
-if (watchMatch) watchers = parseInt(watchMatch[1]);
-
-const timerEl = document.querySelector(".ux-timer") || document.querySelector(".x-end-time");
-let timeLeft = isAuction ? "Ending Soon" : "Buy It Now";
-if (timerEl) {
-  // Clean up the timer to strip "Today 05:39 PM" formatting
-  const timeStr = timerEl.innerText.replace(/Ends\s*in/i, "").replace(/Ends/i, "").trim();
-  const timeMatch = timeStr.match(/(\d+d\s+\d+h|\d+h\s+\d+m|\d+m\s+\d+s)/);
-  timeLeft = timeMatch ? timeMatch[0] : timeStr.split(/Today|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/i)[0].trim();
-}
-
-const badge = document.createElement("div");
-badge.id = "mirrorpool-badge-root";
-badge.innerHTML = `
-  <div class="mp-header">
-    <div class="mp-brand">◈ MIRROR POOL™ SCOUT</div>
-    <div class="mp-status">${isAuction ? "AUCTION TRACKER" : "FIXED LISTING"}</div>
-  </div>
-  <div class="mp-metrics-row" style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; text-align: left;">
-    <div>
-      <div class="mp-metric-label" style="font-size:10px; color:#8b949e; text-transform:uppercase; margin-bottom:2px;">${isAuction ? "Bid" : "Price"}</div>
-      <div class="mp-metric-val" style="color:#00ffcc; font-size:14px; font-weight:bold;">$${listedPrice.toFixed(2)}</div>
-    </div>
-    <div>
-      <div class="mp-metric-label" style="font-size:10px; color:#8b949e; text-transform:uppercase; margin-bottom:2px;">Shipping</div>
-      <div class="mp-metric-val" style="color:#8b949e; font-size:12px; font-weight:bold; margin-top:2px;">${shippingCost === 0 ? 'Free' : '+$' + shippingCost.toFixed(2)}</div>
-    </div>
-    <div>
-      <div class="mp-metric-label" style="font-size:10px; color:#8b949e; text-transform:uppercase; margin-bottom:2px;">Activity</div>
-      <div class="mp-metric-val" style="color:#3fb950; font-size:12px; font-weight:bold; margin-top:2px;">${bidCount}B / ${watchers}W</div>
-    </div>
-    <div>
-      <div class="mp-metric-label" style="font-size:10px; color:#8b949e; text-transform:uppercase; margin-bottom:2px;">Time Left</div>
-      <div class="mp-metric-val" style="color:#eab308; font-size:12px; font-weight:bold; margin-top:2px;">${timeLeft}</div>
-    </div>
-  </div>
-  <div id="mp-deal-verdict-container"></div>
-  <div class="mp-actions-row" style="display:flex; gap:8px; margin-top: 10px;">
-    <button id="mp-btn-save" class="mp-btn" style="flex:1; padding:6px; border-radius:4px; background:#21262d; border:1px solid #30363d; color:#c9d1d9; font-weight:bold; cursor:pointer;">+ Bookmark</button>
-    <button id="mp-btn-dash" class="mp-btn" style="flex:1; padding:6px; border-radius:4px; background:rgba(0,255,204,0.05); border:1px solid #00ffcc; color:#00ffcc; font-weight:bold; cursor:pointer;">⛶ Open Dashboard</button>
-  </div>
-`;
-
-const targetParent = priceContainer.closest(".x-price-section") || priceContainer.parentElement;
-targetParent.parentNode.insertBefore(badge, targetParent.nextSibling);
-
-let trueMarketFloor = "N/A";
-
-// Clean eBay title for API matching
-
-
-    // Mirror Pool: Smart eBay Title Extraction
-    let itemSpec = Array.from(document.querySelectorAll(".ux-labels-values__labels")).find(el => el.innerText.includes("Card Name"));
-    if (itemSpec && itemSpec.nextElementSibling) {
-        searchTitle = itemSpec.nextElementSibling.innerText.trim();
-    } else {
-        // Fallback cleanup
-        searchTitle = searchTitle.replace(/^(MTG|Magic: The Gathering|NM|LP|MP|HP|Foil)\s*[-|:]?\s*/ig, "").replace(/\[.*?\]/g, "").split("-")[0].trim();
-    }
+function injectOverlay() {
+    if (document.getElementById("mirror-pool-overlay")) return;
     
-    // Clean eBay title for Scryfall matching
-    let cleanTitle = searchTitle;
-    // Strip common prefixes
-    cleanTitle = cleanTitle.replace(/^MTG\s*(COMMANDER:?\s*)?/i, "");
-    cleanTitle = cleanTitle.replace(/^(Magic:?\s*The\s*Gathering|NM|LP|MP|HP|Foil|Pre-Owned)\s*[-|:]?\s*/ig, "");
-    // Strip set tags like BLOOMBURROW, DUSKMOURN, SECRETS OF STRIXHAVEN
-    cleanTitle = cleanTitle.replace(/^[A-Z0-9\s]+:\s*/i, "");
-    // Strip trailing set codes, collector numbers, conditions: e.g. BLC #20 EN NF NM
-    cleanTitle = cleanTitle.replace(/[A-Z0-9]{3,4}\s*#?\d+.*$/i, "");
-    cleanTitle = cleanTitle.replace(/\b(EN|NF|NM|LP|Foil|Non-Foil|Borderless|Showcase|Extended Art)\b.*/ig, "");
-    cleanTitle = cleanTitle.replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").trim();
-    if (cleanTitle.length > 2) searchTitle = cleanTitle;
-
-    
-    // Smart eBay Data Extraction: Target Item Specifics Table
-    let structuredName = searchTitle;
+    // 1. Extract Name from Item Specifics
+    let searchTitle = document.title;
     const labels = document.querySelectorAll(".ux-labels-values__labels");
     for (let label of labels) {
         if (label.innerText.trim().toLowerCase() === "card name") {
             const valueNode = label.nextElementSibling;
             if (valueNode) {
-                structuredName = valueNode.innerText.trim();
+                searchTitle = valueNode.innerText.trim();
                 break;
             }
         }
     }
     
-    // If structured data was found, override the raw title search
-    if (structuredName !== searchTitle && structuredName.length > 2) {
-        searchTitle = structuredName;
-    } else {
-        // Fallback basic cleanup if Item Specifics are missing
+    // Fallback cleanup if Item Specifics are missing
+    if (searchTitle === document.title) {
         searchTitle = searchTitle.replace(/^(MTG|Magic:?\s*The\s*Gathering|NM|LP|MP|HP|Foil)\s*[-|:]?\s*/ig, "");
-        searchTitle = searchTitle.replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").trim();
+        searchTitle = searchTitle.replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").split("|")[0].trim();
     }
-\n    chrome.runtime.sendMessage({ action: "fetchComps"
-, cardTitle: searchTitle }, (res) => {
-  const verdictContainer = badge.querySelector('#mp-deal-verdict-container');
-  
-  if (!res || !res.found) {
-    verdictContainer.innerHTML = `
-      <div style="background:rgba(218,54,51,0.1); border:1px solid #da3633; color:#ff7b72; padding:8px; border-radius:4px; font-size:11px; text-align:center; margin-top:10px;">
-        ⚠️ API Query Failed: Could not extract exact card name.
-      </div>`;
-    return;
-  }
-  
-  const rawMarketPrice = parseFloat(res.usd);
-  const tcgShipping = rawMarketPrice >= 50.00 ? 0.00 : 1.22;
-  trueMarketFloor = (rawMarketPrice + tcgShipping).toFixed(2);
-  const discountPct = ((parseFloat(trueMarketFloor) - totalCost) / parseFloat(trueMarketFloor)) * 100;
-  
-  let dealBanner = '';
-  if (discountPct >= 20) dealBanner = `<div style="background:#238636; color:#fff; padding:6px; text-align:center; border-radius:4px; font-weight:bold; font-size:11px; margin-bottom:10px;">🔥 S-TIER DEAL: ${discountPct.toFixed(0)}% UNDER MARKET</div>`;
-  else if (discountPct >= 5) dealBanner = `<div style="background:#1f6feb; color:#fff; padding:6px; text-align:center; border-radius:4px; font-weight:bold; font-size:11px; margin-bottom:10px;">✅ GOOD DEAL: ${discountPct.toFixed(0)}% UNDER MARKET</div>`;
-  else if (discountPct >= -5) dealBanner = `<div style="background:#eab308; color:#000; padding:6px; text-align:center; border-radius:4px; font-weight:bold; font-size:11px; margin-bottom:10px;">⚖️ FAIR MARKET VALUE</div>`;
-  else dealBanner = `<div style="background:#da3633; color:#fff; padding:6px; text-align:center; border-radius:4px; font-weight:bold; font-size:11px; margin-bottom:10px;">⚠️ OVERPRICED: ${Math.abs(discountPct).toFixed(0)}% OVER MARKET</div>`;
 
-  verdictContainer.innerHTML = `
-    ${dealBanner}
-    <div class="mp-arbitrage-row" style="padding-top: 5px; border-top: 1px solid #30363d;">
-      <div style="font-size: 10px; color: #8b949e; margin-bottom: 5px;">LIVE BENCHMARKS:</div>
-      <div style="display: flex; gap: 8px;">
-        <a href="${res.tcg_url}" target="_blank" class="mp-btn" style="background:#21262d; border:1px solid #30363d; color:#c9d1d9; text-decoration:none; flex:1; text-align:center; padding:6px; border-radius:4px; font-size:11px; font-weight:bold;">TCG (Total): $${trueMarketFloor}</a>
-        ${res.eur !== "N/A" ? `<a href="${res.cm_url}" target="_blank" class="mp-btn" style="background:#21262d; border:1px solid #30363d; color:#c9d1d9; text-decoration:none; flex:1; text-align:center; padding:6px; border-radius:4px; font-size:11px; font-weight:bold;">Cardmarket: €${(parseFloat(res.eur) + 1.50).toFixed(2)}</a>` : ''}
-      </div>
-    </div>
-  `;
-});
+    // 2. Build UI
+    const overlay = document.createElement("div");
+    overlay.id = "mirror-pool-overlay";
+    overlay.style.cssText = "position:fixed; bottom:20px; right:20px; z-index:999999; background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:15px; width:300px; color:#f8fafc; font-family:sans-serif; box-shadow:0 10px 15px -3px rgba(0,0,0,0.5);";
+    
+    overlay.innerHTML = `
+        <div style="color:#10b981; font-weight:bold; margin-bottom:10px; font-size:14px;">🔮 Mirror Pool Scout</div>
+        <div style="font-size:12px; margin-bottom:5px; color:#94a3b8;">Target: <span style="color:#fff;">${searchTitle}</span></div>
+        <div id="mp-pricing-metrics" style="font-size:12px; margin-bottom:15px;">⏳ Querying Scryfall API...</div>
+        <div style="display:flex; gap:10px;">
+            <button id="mp-bookmark-btn" style="flex:1; padding:8px; background:#3b82f6; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">+ Bookmark</button>
+            <button id="mp-dash-btn" style="flex:1; padding:8px; background:#1e293b; color:#fff; border:1px solid #334155; border-radius:4px; cursor:pointer;">Open Dashboard</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
 
-document.getElementById("mp-btn-dash").addEventListener("click", () => {
-  chrome.runtime.sendMessage({ action: "openDashboard" });
-});
-
-const saveBtn = document.getElementById("mp-btn-save");
-saveBtn.addEventListener("click", () => {
-  const cardRecord = { 
-    title: searchTitle, 
-    price: totalCost.toFixed(2), 
-    bidders: bidCount,
-    watchers: watchers,
-    timeLeft: timeLeft,
-    marketFloor: trueMarketFloor,
-    url: window.location.href, 
-    savedAt: Date.now() 
-  };
-  chrome.storage.local.get({ watchlist: [] }, (res) => {
-    const updated = [cardRecord, ...res.watchlist.filter(x => x.title !== cardRecord.title)];
-    chrome.storage.local.set({ watchlist: updated }, () => {
-      saveBtn.innerText = "✓ Bookmarked";
-      saveBtn.style.borderColor = "#3fb950";
-      saveBtn.style.color = "#3fb950";
+    // 3. Query Scryfall Background Engine
+    chrome.runtime.sendMessage({ action: "fetchComps", searchTitle: searchTitle }, (response) => {
+        const metricsDiv = document.getElementById("mp-pricing-metrics");
+        if (response && response.success) {
+            metricsDiv.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-top:8px;">
+                    <span>Paper Floor:</span> <span style="color:#10b981; font-weight:bold;">$${response.prices.usd}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:4px;">
+                    <span>MTGO TIX:</span> <span style="color:#3b82f6; font-weight:bold;">${response.prices.tix}</span>
+                </div>
+            `;
+        } else {
+            metricsDiv.innerHTML = `<span style="color:#ef4444;">⚠ API Query Failed: Card not found.</span>`;
+        }
     });
-  });
-});
+
+    // 4. Button Listeners
+    document.getElementById("mp-dash-btn").addEventListener("click", () => {
+        chrome.runtime.sendMessage({ action: "openDashboard" });
+    });
+    
+    document.getElementById("mp-bookmark-btn").addEventListener("click", (e) => {
+        e.target.innerText = "✅ Saved!";
+        e.target.style.background = "#10b981";
+        const priceStr = document.querySelector(".x-price-primary span, .main-price span")?.innerText || "N/A";
+        
+        chrome.runtime.sendMessage({
+            action: "sync_to_dashboard",
+            payload: {
+                actionType: "tcg_product",
+                cardName: searchTitle,
+                metricA: "eBay Price",
+                valueA: priceStr.trim(),
+                metricB: "Source",
+                valueB: "eBay Listing",
+                url: window.location.href
+            }
+        });
+        setTimeout(() => { e.target.innerText = "+ Bookmark"; e.target.style.background = "#3b82f6"; }, 2000);
+    });
 }
 
-if (document.readyState === "loading") {
-document.addEventListener("DOMContentLoaded", initScoutBadge);
-} else {
-initScoutBadge();
-}
-})();
+// Initialize after a short delay to let eBay's dynamic DOM settle
+setTimeout(injectOverlay, 1500);
