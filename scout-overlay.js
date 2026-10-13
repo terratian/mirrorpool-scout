@@ -13,35 +13,29 @@ const shadow = host.attachShadow({ mode: "open" });
 const hostname = window.location.hostname;
 
 function detectDomainProfile() {
-    let profile = {
-        name: "Generic TCG Scout",
-        primaryLabel: "📥 Push to Watchlist",
-        secondaryLabel: "📋 Copy Spread Data",
-        cardName: document.title.split("|")[0].trim(),
-        metricA: "Page URL",
-        metricB: window.location.href,
-        actionType: "watchlist"
-    };
+    let cardName = "Unknown Card";
 
     if (hostname.includes("mtggoldfish.com")) {
-        // Specifically target the primary card header container, completely avoiding footers and legal text
-        let cardName = "Unknown Card";
-        const titleEl = document.querySelector(".card-heading h1, .card-name-header h1, h1");
-        
-        // Fallback: search h1 elements and filter out legal/privacy strings
-        const h1Elements = document.querySelectorAll("h1");
-        for (let el of h1Elements) {
-            const text = el.innerText.trim();
-            if (text && !text.includes("Privacy") && !text.includes("CCPA") && !text.includes("Cookie") && !text.includes("MTGGoldfish")) {
-                cardName = text.split("#")[0].replace("Price", "").trim();
-                break;
+        // Check common MTGGoldfish title containers first
+        const primaryHeading = document.querySelector(".card-name-header, h1.text-dark, .col-md-12 h1");
+        if (primaryHeading) {
+            cardName = primaryHeading.innerText.split("#")[0].replace("Price", "").trim();
+        } else {
+            // Fallback: iterate over all h1 elements and grab the first valid one
+            const headers = document.querySelectorAll("h1");
+            for (let h of headers) {
+                const text = h.innerText.trim();
+                if (text && !text.includes("Privacy") && !text.includes("CCPA") && !text.includes("Cookie") && !text.includes("MTGGoldfish")) {
+                    cardName = text.split("#")[0].replace("Price", "").trim();
+                    break;
+                }
             }
         }
 
         const tabletopEl = document.querySelector(".tweak-price-tabletop, .price-box-price");
         const mtgoEl = document.querySelector(".tweak-price-mtgo");
         
-        profile = {
+        return {
             name: "MTGGoldfish Inspector",
             primaryLabel: "📥 Push to Watchlist",
             secondaryLabel: "⚡ Export Arbitrage Delta",
@@ -51,31 +45,17 @@ function detectDomainProfile() {
             metricC: mtgoEl ? mtgoEl.innerText.trim() + " TIX" : "N/A",
             actionType: "goldfish_card"
         };
-    } else if (hostname.includes("tcgplayer.com")) {
-        const titleEl = document.querySelector(".product-details__name");
-        const priceEl = document.querySelector(".product-details__price");
-        
-        profile = {
-            name: "TCGplayer Marketplace",
-            primaryLabel: "🎯 Add to Card Chase",
-            secondaryLabel: "📋 Copy Direct-Buy Specs",
-            cardName: titleEl ? titleEl.innerText.trim() : "TCG Product",
-            metricA: "Market Price",
-            metricB: priceEl ? priceEl.innerText.trim() : "N/A",
-            actionType: "tcg_product"
-        };
-    } else if (hostname.includes("mtgdecks.net")) {
-        profile = {
-            name: "MTGDecks Analyzer",
-            primaryLabel: "🛠️ Scrape & Compute Spreads",
-            secondaryLabel: "🎮 Export MTGA Format",
-            cardName: "Active Decklist",
-            metricA: "Detected Format",
-            metricB: "Competitive Standard/Modern",
-            actionType: "decklist_scrape"
-        };
     }
-    return profile;
+    
+    return {
+        name: "Generic TCG Scout",
+        primaryLabel: "📥 Push to Watchlist",
+        secondaryLabel: "📋 Copy Spread Data",
+        cardName: document.title.split("|")[0].trim(),
+        metricA: "Page URL",
+        metricB: window.location.href,
+        actionType: "watchlist"
+    };
 }
 
 const data = detectDomainProfile();
@@ -165,11 +145,7 @@ shadow.getElementById("primary-action-btn").addEventListener("click", () => {
     btn.innerText = "✅ Data Captured!";
     btn.style.backgroundColor = "#10b981";
     
-    chrome.runtime.sendMessage({ action: "sync_to_dashboard", payload: data }, (response) => {
-        if (response && response.status === "success") {
-            console.log("Synced to storage key:", response.storedKey);
-        }
-    });
+    chrome.runtime.sendMessage({ action: "sync_to_dashboard", payload: data });
 
     setTimeout(() => { 
         btn.innerText = data.primaryLabel; 
