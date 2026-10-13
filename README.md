@@ -10,7 +10,7 @@ Mirror Pool is a one-man operation. I am a single dad building this out of North
 
 If you are interested in testing an early build, following the development, or want to support the project before the official launch, I would love to hear from you.
 
-📩 **Contact / Early Access:** [YOUR_EMAIL_HERE]
+📩 **Contact / Early Access:** joshuasultan@gmail.com
 
 ## Planned Features
 * **Live Market Procurement:** Custom UI overlay injected into marketplace listings for one-click card tracking.
