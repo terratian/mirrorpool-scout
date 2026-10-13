@@ -45,3 +45,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true; 
     }
 });
+
+// --- Legacy UI Button Listeners ---
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "openDashboard") {
+        // Check if Side Panel API is available, otherwise fallback to standard tab
+        if (chrome.sidePanel && sender.tab) {
+            chrome.sidePanel.open({ windowId: sender.tab.windowId });
+        } else {
+            chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
+        }
+        sendResponse({ status: "dashboard_opened" });
+    }
+});

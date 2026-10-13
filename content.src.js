@@ -83,6 +83,9 @@ targetParent.parentNode.insertBefore(badge, targetParent.nextSibling);
 
 let trueMarketFloor = "N/A";
 
+// Clean eBay title for API matching
+searchTitle = searchTitle.replace(/^(NM|LP|MP|HP|Foil)\s*[-|:]?\s*/i, "").replace(/\[.*?\]/g, "").split("-")[0].trim();
+
 chrome.runtime.sendMessage({ action: "fetchComps", cardTitle: searchTitle }, (res) => {
   const verdictContainer = badge.querySelector('#mp-deal-verdict-container');
   
