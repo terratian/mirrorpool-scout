@@ -1,8 +1,7 @@
 // Mirror Pool Scout Service Worker
 
 // 1. Direct Icon Click -> Open Dashboard in New Tab
-chrome.action.onClicked.addListener((tab) => {
-    chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
+
 });
 
 // 2. Runtime Message Dispatcher
@@ -65,4 +64,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
         return true;
     }
+});
+
+
+function focusOrCreateDashboard() {
+    const dashUrl = chrome.runtime.getURL("dashboard.html");
+    chrome.tabs.query({ url: dashUrl }, (tabs) => {
+        if (tabs.length > 0) {
+            chrome.tabs.update(tabs[0].id, { active: true });
+            chrome.windows.update(tabs[0].windowId, { focused: true });
+        } else {
+            chrome.tabs.create({ url: dashUrl });
+        }
+    });
+}
+
+chrome.action.onClicked.addListener(() => focusOrCreateDashboard());
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "openDashboard") {
+        focusOrCreateDashboard();
+        sendResponse({ status: "dashboard_opened" });
+        return true;
+    }
+
 });

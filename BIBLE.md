@@ -70,3 +70,8 @@
 * **Algorithmic Deal Grading:** The eBay overlay now computes an on-the-fly Deal Grade ($A+$ to Overpriced) based on the percentage delta between active listing price and Scryfall Paper Floor.
 * **Metagame Tagging:** Injects cross-format archetype categorization tags onto saved items.
 * **Active Tab Panels:** Restored separate view-rendering for `tab-watchlist`, `tab-chase` (Procurement Hunter), and `tab-arbitrage` (Arbitrage Desk) in `dashboard.html` / `dashboard.js`.
+
+## 10. Dashboard UX & Algorithm Restoration (October 2026)
+* **Tab Focus Router:** Replaced `chrome.tabs.create` with `chrome.tabs.query` in `background.js` to focus existing dashboard tabs instead of spawning duplicates.
+* **CSP Compliance:** Rewrote dynamically injected button handlers (`Drop Target`) to use distinct DOM event listeners instead of inline `onclick` attributes, resolving manifest security blocks.
+* **Algorithm Integration:** Re-integrated `calculateArbitrageDelta` into `dashboard.js` to process multi-item array iterations, and linked the Export button to the Bulk Cart Manifest formatting logic.
