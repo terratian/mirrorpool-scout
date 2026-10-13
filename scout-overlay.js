@@ -24,8 +24,20 @@ function detectDomainProfile() {
     };
 
     if (hostname.includes("mtggoldfish.com")) {
-        const headerEl = document.querySelector(".card-name-header h1, h1");
-        let cardName = headerEl ? headerEl.innerText.split("#")[0].replace("Price", "").trim() : "Unknown Card";
+        // Specifically target the primary card header container, completely avoiding footers and legal text
+        let cardName = "Unknown Card";
+        const titleEl = document.querySelector(".card-heading h1, .card-name-header h1, h1");
+        
+        // Fallback: search h1 elements and filter out legal/privacy strings
+        const h1Elements = document.querySelectorAll("h1");
+        for (let el of h1Elements) {
+            const text = el.innerText.trim();
+            if (text && !text.includes("Privacy") && !text.includes("CCPA") && !text.includes("Cookie") && !text.includes("MTGGoldfish")) {
+                cardName = text.split("#")[0].replace("Price", "").trim();
+                break;
+            }
+        }
+
         const tabletopEl = document.querySelector(".tweak-price-tabletop, .price-box-price");
         const mtgoEl = document.querySelector(".tweak-price-mtgo");
         
@@ -153,7 +165,11 @@ shadow.getElementById("primary-action-btn").addEventListener("click", () => {
     btn.innerText = "✅ Data Captured!";
     btn.style.backgroundColor = "#10b981";
     
-    chrome.runtime.sendMessage({ action: "sync_to_dashboard", payload: data });
+    chrome.runtime.sendMessage({ action: "sync_to_dashboard", payload: data }, (response) => {
+        if (response && response.status === "success") {
+            console.log("Synced to storage key:", response.storedKey);
+        }
+    });
 
     setTimeout(() => { 
         btn.innerText = data.primaryLabel; 
@@ -163,9 +179,9 @@ shadow.getElementById("primary-action-btn").addEventListener("click", () => {
 
 shadow.getElementById("secondary-action-btn").addEventListener("click", () => {
     const btn = shadow.getElementById("secondary-action-btn");
-    const exportText = `[MPScout Export] ${data.cardName} | ${data.metricA}: ${data.metricB} | ${window.location.href}`;
+    const exportText = `[MPScout Export] ${data.cardName} | ${data.metricA}: ${data.metricB} ${data.metricC ? '| MTGO: ' + data.metricC : ''} | ${window.location.href}`;
     navigator.clipboard.writeText(exportText).then(() => {
-        btn.innerText = "✅ Copied to Clipboard!";
+        btn.innerText = "✅ Copied Spreads!";
         setTimeout(() => { btn.innerText = data.secondaryLabel; }, 2000);
     });
 });
