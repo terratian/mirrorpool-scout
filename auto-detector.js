@@ -324,14 +324,16 @@
                         if (!cardObj) return;
                         // Cap eBay search at 85% of Scryfall Floor inside MTG Individual Cards (_sacat=19107)
                         const maxSnipePrice = Math.max(0.99, cardObj.usd * 0.85).toFixed(2);
-                        const exactQuery = encodeURIComponent(`MTG "${cardObj.name}" -proxy -art -custom`);
+                        const minBinPrice = cardObj.usd >= 8.0 ? Math.max(2.50, cardObj.usd * 0.40).toFixed(2) : "0.99";
+                        const minAucPrice = cardObj.usd >= 15.0 ? Math.max(1.99, cardObj.usd * 0.18).toFixed(2) : "0.99";
+                        const exactQuery = encodeURIComponent(`MTG "${cardObj.name}" -proxy -proxies -playtest -fanart -alter -alters -altered -custom -placeholder -token`);
                         const shortName = cardObj.name.split(",")[0];
                         if (binLink) {
-                            binLink.href = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_BIN=1&_sop=15&_udhi=${maxSnipePrice}`;
-                            binLink.innerText = `🎯 Snipe ${shortName} (<$${maxSnipePrice} BIN) ↗`;
+                            binLink.href = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_BIN=1&_sop=15&_udlo=${minBinPrice}&_udhi=${maxSnipePrice}`;
+                            binLink.innerText = `🎯 Snipe ${shortName} ($${minBinPrice}–$${maxSnipePrice} BIN) ↗`;
                         }
                         if (aucLink) {
-                            aucLink.href = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_Auction=1&_sop=1&_udhi=${maxSnipePrice}`;
+                            aucLink.href = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_Auction=1&_sop=1&_udlo=${minAucPrice}&_udhi=${maxSnipePrice}`;
                             aucLink.innerText = `⏱ ${shortName} Auctions (<$${maxSnipePrice}) ↗`;
                         }
                     }
@@ -396,6 +398,148 @@
                 chrome.runtime.sendMessage({ action: "openDashboard" });
             });
         });
+    }
+
+
+    // --- Dedicated MTGScavenger.com Live Under-Market Auction Parser ---
+    function initMtgScavengerAdapter() {
+        chrome.storage.local.get({ scoutArmed: true, procurementTargets: [], watchlist: [] }, (store) => {
+            if (!store.scoutArmed) return;
+
+            const chaseSet = new Set(
+                (store.procurementTargets || []).map(t => (t.cardName || "").toLowerCase().trim()).filter(Boolean)
+            );
+
+            function scanScavengerDOM() {
+                const deals = [];
+                const seenTitles = new Set();
+
+                // MTGScavenger renders auction cards with Market Price, Current Bid, Title ("Wizards Of The Coast ..."), and "Ends in HH:MM:SS"
+                const candidateBlocks = document.querySelectorAll("div, article, li");
+                candidateBlocks.forEach(el => {
+                    const txt = (el.innerText || "").trim();
+                    if (!txt || txt.length > 420 || !txt.includes("Ends in")) return;
+
+                    // Look for two dollar amounts ($Market and$Bid) + "Ends in HH:MM:SS"
+                    const prices = txt.match(/\$\d+(?:\.\d{2})?/g);
+                    const timeMatch = txt.match(/Ends in\s+(\d{2}:\d{2}:\d{2})/i);
+                    if (!prices || prices.length < 2 || !timeMatch) return;
+
+                    const p1 = parseFloat(prices[0].replace("$", ""));
+                    const p2 = parseFloat(prices[1].replace("$", ""));
+                    const marketFloor = Math.max(p1, p2);
+                    const currentBid = Math.min(p1, p2);
+                    if (marketFloor <= 0 || currentBid <= 0 || marketFloor === currentBid) return;
+
+                    // Extract listing title line
+                    const lines = txt.split("\n").map(l => l.trim()).filter(l => l.length > 6 && !l.startsWith("$") && !l.startsWith("Ends in"));
+                    const rawListingTitle = lines[0] || "";
+                    if (!rawListingTitle || seenTitles.has(rawListingTitle)) return;
+                    seenTitles.add(rawListingTitle);
+
+                    // Clean "Wizards Of The Coast " prefix and trailing set/collector tokens
+                    const cleanTitle = rawListingTitle
+                        .replace(/^(?:\d+x\s+)?(?:Wizards Of The Coast|Magic:?\s*The\s*Gathering|MTG)\s+/i, "")
+                        .split(/\s+(?:\d{1,4}\/\d{1,4}|#\d+|Regular|Foil|Borderless|Showcase|Extended|Mythic|Rare|Uncommon|Revised|Double Masters|Commander|Special Guests|Jumpstart|Ravnica|Modern|Outlaws|Bloomburrow)/i)[0]
+                        .trim();
+
+                    if (cleanTitle.length < 3) return;
+
+                    const linkEl = el.querySelector("a[href*='ebay.com'], a[href]");
+                    const url = linkEl ? linkEl.href : `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent("MTG " + cleanTitle)}&_sacat=19107&LH_Auction=1&_sop=1`;
+                    const spreadUsd = marketFloor - currentBid;
+                    const spreadPct = (spreadUsd / marketFloor) * 100;
+                    const inChaseList = chaseSet.has(cleanTitle.toLowerCase());
+
+                    // Highlight matching Chase Hunt cards directly on MTGScavenger!
+                    if (inChaseList) {
+                        el.style.outline = "2px solid #00ffcc";
+                        el.style.boxShadow = "0 0 15px rgba(0,255,204,0.35)";
+                    }
+
+                    deals.push({
+                        title: cleanTitle,
+                        cardName: cleanTitle,
+                        rawListingTitle,
+                        marketFloor: marketFloor.toFixed(2),
+                        price: currentBid.toFixed(2),
+                        totalCost: currentBid.toFixed(2),
+                        spreadUsd,
+                        spreadPct,
+                        timeLeft: timeMatch[1],
+                        activity: `MTGScavenger Deal (-${spreadPct.toFixed(0)}%)`,
+                        inChaseList,
+                        url,
+                        savedAt: Date.now()
+                    });
+                });
+
+                deals.sort((a, b) => (b.inChaseList - a.inChaseList) || (b.spreadUsd - a.spreadUsd));
+                return deals;
+            }
+
+            function renderScavengerBanner() {
+                const deals = scanScavengerDOM();
+                const chaseMatches = deals.filter(d => d.inChaseList);
+                const topDeal = deals[0];
+
+                let bar = document.getElementById("mirrorpool-scavenger-bar");
+                if (!bar) {
+                    bar = document.createElement("div");
+                    bar.id = "mirrorpool-scavenger-bar";
+                    bar.style.cssText = "position:sticky; top:0; z-index:2147483646; background:#0b1120; border-bottom:2px solid #00ffcc; padding:10px 18px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; color:#f8fafc; box-shadow:0 10px 25px rgba(0,0,0,0.8);";
+                    document.body.prepend(bar);
+                }
+
+                bar.innerHTML = `
+                    <div style="max-width:1280px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="color:#00ffcc; font-weight:800; font-size:13px;">◈ MIRROR POOL™ SCOUT</span>
+                            <span style="background:#1e293b; color:#f59e0b; font-size:10px; font-weight:800; padding:3px 7px; border-radius:4px;">MTGSCAVENGER LIVE ARBITRAGE HARVESTER</span>
+                            <span style="font-size:12px; color:#cbd5e1;">
+                                Scanned <strong>${deals.length}</strong> Under-Market Auctions |
+                                <strong style="color:#00ffcc;">${chaseMatches.length}</strong> Match Your Active Chase Hunt
+                                ${topDeal ? ` | Top Spread: <strong style="color:#10b981;">${topDeal.cardName} ($${topDeal.price} vs $${topDeal.marketFloor} Floor / +$${topDeal.spreadUsd.toFixed(2)})</strong>` : ""}
+                            </span>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button id="mp-scav-rescan" style="background:#1e293b; color:#38bdf8; border:1px solid #334155; padding:6px 10px; border-radius:5px; font-size:11px; font-weight:700; cursor:pointer;">🔄 Re-Scan Page</button>
+                            <button id="mp-scav-import-top" style="background:#10b981; color:#030712; border:none; padding:6px 12px; border-radius:5px; font-size:11px; font-weight:800; cursor:pointer;">
+                                ⚡ Push Top ${Math.min(15, deals.length)} Arbitrage Deals to Scout
+                            </button>
+                            <button id="mp-scav-dash" style="background:rgba(0,255,204,0.1); color:#00ffcc; border:1px solid #00ffcc; padding:6px 10px; border-radius:5px; font-size:11px; font-weight:700; cursor:pointer;">⛶ Dashboard</button>
+                        </div>
+                    </div>
+                `;
+
+                bar.querySelector("#mp-scav-rescan").addEventListener("click", renderScavengerBanner);
+                bar.querySelector("#mp-scav-dash").addEventListener("click", () => {
+                    chrome.runtime.sendMessage({ action: "openDashboard" });
+                });
+                const impBtn = bar.querySelector("#mp-scav-import-top");
+                impBtn.addEventListener("click", () => {
+                    const batch = deals.slice(0, 15);
+                    if (batch.length === 0) return;
+                    impBtn.innerText = "⏳ Syncing Deals...";
+                    chrome.runtime.sendMessage({
+                        action: "importDetectedToScout",
+                        mode: "scavenger_batch",
+                        deals: batch
+                    }, () => {
+                        impBtn.innerText = `✓ Pushed ${batch.length} Deals to Watchlist & Arbitrage Desk!`;
+                        impBtn.style.background = "#059669";
+                        impBtn.style.color = "#fff";
+                    });
+                });
+            }
+
+            setTimeout(renderScavengerBanner, 1800);
+        });
+    }
+
+    if (host.includes("mtgscavenger.com")) {
+        initMtgScavengerAdapter();
+        return;
     }
 
     setTimeout(buildSiteAdapter, 900);

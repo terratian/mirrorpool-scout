@@ -312,7 +312,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             });
             return true;
         }
-                    if (mode === "procurement_single" && message.cardName) {
+                                if (mode === "scavenger_batch" && Array.isArray(message.deals)) {
+                chrome.storage.local.get({ watchlist: [] }, (res) => {
+                    const existing = Array.isArray(res.watchlist) ? res.watchlist : [];
+                    const merged = [...message.deals, ...existing];
+                    const seen = new Set();
+                    const deduped = merged.filter(item => {
+                        const k = ((item.cardName || item.title || "") + "_" + (item.price || "")).toLowerCase();
+                        if (seen.has(k)) return false;
+                        seen.add(k);
+                        return true;
+                    });
+                    chrome.storage.local.set({ watchlist: deduped }, () => {
+                        sendResponse({ status: "success", count: message.deals.length });
+                    });
+                });
+                return true;
+            }
+            if (mode === "procurement_single" && message.cardName) {
                 chrome.storage.local.get({ procurementTargets: [] }, (res) => {
                     const list = Array.isArray(res.procurementTargets) ? res.procurementTargets : [];
                     const key = message.cardName.toLowerCase().trim();

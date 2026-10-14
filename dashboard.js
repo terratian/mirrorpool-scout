@@ -190,6 +190,7 @@ function renderSavedListsToolbar(savedLists, activeDeckName) {
             </select>
             <button id="btn-new-chase-list" style="background:#1e293b; color:#38bdf8; border:1px solid #334155; border-radius:6px; padding:7px 10px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;">+ New List</button>
             <button id="btn-delete-chase-list" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid #ef4444; border-radius:6px; padding:7px 10px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;">🗑 Delete</button>
+            <a href="https://mtgscavenger.com/" target="_blank" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid #f59e0b; border-radius:6px; padding:7px 10px; font-size:11px; font-weight:800; text-decoration:none; white-space:nowrap;" title="Open MTGScavenger with Mirror Pool Scout Adapter">🦴 Hunt MTGScavenger ↗</a>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
             <span style="font-size:11px; color:#94a3b8; font-weight:600;">Sort Chase Hunt:</span>
@@ -566,10 +567,12 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
                 const binLabel = unitPaper > 0 ? `BIN <$${snipeCeiling}` : "eBay BIN";
                 const aucLabel = unitPaper > 0 ? `Auc <$${snipeCeiling}` : "eBay Auc";
 
-                const exactQuery = encodeURIComponent(`MTG "${name}" -proxy -custom`);
+                const minBinFloor = unitPaper >= 8.0 ? Math.max(2.50, unitPaper * 0.40).toFixed(2) : "0.99";
+                const minAucFloor = unitPaper >= 15.0 ? Math.max(1.99, unitPaper * 0.18).toFixed(2) : "0.99";
+                const exactQuery = encodeURIComponent(`MTG "${name}" -proxy -proxies -playtest -fanart -alter -alters -altered -custom -placeholder -token -replica`);
                 const tcgUrl = `https://www.tcgplayer.com/search/magic/product?q=${encodeURIComponent(name)}`;
-                const ebayBinUrl = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_BIN=1&_sop=15&_udhi=${snipeCeiling}`;
-                const ebayAuctionUrl = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_Auction=1&_sop=1&_udhi=${snipeCeiling}`;
+                const ebayBinUrl = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_BIN=1&_sop=15&_udlo=${minBinFloor}&_udhi=${snipeCeiling}`;
+                const ebayAuctionUrl = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_Auction=1&_sop=1&_udlo=${minAucFloor}&_udhi=${snipeCeiling}`;
 
                 let trendPill = "";
                 if (item.deltaPct >= 5) {
@@ -677,8 +680,9 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
                 }
 
                 const maxSnipe = Math.max(0.99, paperFloor * 0.85).toFixed(2);
-                const encoded = encodeURIComponent(`MTG "${name}" -proxy -custom`);
-                const actionUrl = wMatch?.url || `https://www.ebay.com/sch/i.html?_nkw=${encoded}&_sacat=19107&LH_BIN=1&_sop=15&_udhi=${maxSnipe}`;
+                const minSnipe = paperFloor >= 8.0 ? Math.max(2.50, paperFloor * 0.40).toFixed(2) : "0.99";
+                const encoded = encodeURIComponent(`MTG "${name}" -proxy -proxies -playtest -fanart -alter -alters -altered -custom -placeholder -token`);
+                const actionUrl = wMatch?.url || `https://www.ebay.com/sch/i.html?_nkw=${encoded}&_sacat=19107&LH_BIN=1&_sop=15&_udlo=${minSnipe}&_udhi=${maxSnipe}`;
                 const actionLabel = wMatch?.url
                     ? `🎯 Open Bookmarked Deal ($${listedCost.toFixed(2)} vs $${paperFloor.toFixed(2)} Floor) ↗`
                     : `🎯 Snipe eBay BIN <$${maxSnipe} (Floor $${paperFloor.toFixed(2)}) ↗`;
@@ -755,8 +759,9 @@ function renderSynergyAndTrendRadar(enrichedTargets, watchlistItems, priceMap) {
                         ? `<div style="background:rgba(16,185,129,0.14); border:1px solid #10b981; color:#10b981; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700; margin-bottom:6px;">⚡ SYNERGY MATCH WITH YOUR LIST: ${rec.matchedCards.map(c => c.replace(/\b\w/g, l => l.toUpperCase())).join(", ")}</div>`
                         : `<div style="background:#070d17; border:1px solid #1e293b; color:#f59e0b; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700; margin-bottom:6px;">🔥 HIGH-VELOCITY FORMAT MOVER</div>`;
 
-                    const exactQuery = encodeURIComponent(`MTG "${rec.cardName}" -proxy -custom`);
-                    const ebaySnipeUrl = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_BIN=1&_sop=15&_udhi=${rec.snipeCeiling}`;
+                    const minRadarFloor = rec.liveUsd >= 8.0 ? Math.max(2.50, rec.liveUsd * 0.40).toFixed(2) : "0.99";
+                    const exactQuery = encodeURIComponent(`MTG "${rec.cardName}" -proxy -proxies -playtest -fanart -alter -alters -altered -custom -placeholder -token`);
+                    const ebaySnipeUrl = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_BIN=1&_sop=15&_udlo=${minRadarFloor}&_udhi=${rec.snipeCeiling}`;
 
                     return `
                         <div style="background:#070d17; border:1px solid ${rec.matchedCards.length > 0 ? "#10b981" : "#1e293b"}; border-radius:8px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
