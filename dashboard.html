@@ -307,7 +307,7 @@
                 <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">
                     Real-time Cross-Platform Margin Engine. Measures paper marketplace floor costs vs digital MTGO TIX redemption value (~$0.92 cash-out conversion factor).
                 </div>
-                <div id="arbitrage-hud" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; background:var(--bg-card); padding:14px; border-radius:6px;">
+                <div id="arbitrage-hud" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; background:var(--bg-card); padding:14px; border-radius:6px;">
                     <div>
                         <div style="font-size:11px; color:#94a3b8; text-transform:uppercase;">Aggregate Paper Floor</div>
                         <div id="arb-paper-total" style="font-size:18px; font-weight:800; color:var(--accent-green);">$0.00</div>
@@ -347,6 +347,21 @@
                 <div style="font-size:13px; margin-bottom:8px;">Scryfall Public Comp Engine: <strong style="color:var(--accent-green);">Active</strong></div>
                 <div style="font-size:13px; margin-bottom:8px;">eBay Structured DOM Parser: <strong style="color:var(--accent-green);">Active (Item Specifics + Sanitizer)</strong></div>
                 <div style="font-size:13px;">Proxmox / Suite Backend Sync: <span style="color:#64748b;">Ready for Phase 3 Migration</span></div>
+            </div>
+        </div>
+
+        <!-- Dynamic Data Containers Matched to JS Selectors -->
+        <div class="card" id="panel-watchlist">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--accent-green);">📥 Live Watchlist</div>
+            <div id="watchlist-container" class="watchlist-grid">
+                <div style="font-size: 12px; color: var(--text-muted);">No watchlist cards migrated yet.</div>
+            </div>
+        </div>
+
+        <div class="card" id="panel-chase">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--accent-gold);">🎯 Card Chase & Procurement Targets</div>
+            <div id="chase-container" class="chase-grid">
+                <div style="font-size: 12px; color: var(--text-muted);">No chase targets migrated yet.</div>
             </div>
         </div>
     </div>
