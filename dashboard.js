@@ -356,3 +356,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
+
+// --- Mirror Pool Scout: Real-Time Storage Renderer ---
+function renderStoredDatasets() {
+    chrome.storage.local.get(["watchlist_cards", "card_chase"], (result) => {
+        const chaseContainer = document.getElementById("chase-container") || document.querySelector(".chase-grid");
+        if (chaseContainer && result.card_chase) {
+            chaseContainer.innerHTML = result.card_chase.map(item => `
+                <div class="card-item" style="background:#0b1120; border:1px solid #1e293b; padding:8px; margin-bottom:6px; border-radius:4px;">
+                    <strong style="color:#38bdf8;">${item.cardName || item.title || "Unknown Card"}</strong>
+                    <div style="font-size:11px; color:#94a3b8;">${item.metricA}: <span style="color:#f59e0b;">${item.valueA}</span></div>
+                    <div style="font-size:11px; color:#94a3b8;">${item.metricB}: <span style="color:#3b82f6;">${item.valueB}</span></div>
+                </div>
+            `).join('');
+        }
+    });
+}
+
+document.addEventListener("DOMContentLoaded", renderStoredDatasets);
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local') renderStoredDatasets();
+});
