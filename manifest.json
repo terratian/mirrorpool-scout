@@ -22,7 +22,12 @@
     "*://*.tcgplayer.com/*",
     "*://*.fanaticscollect.com/*",
     "*://*.goldin.co/*",
-    "*://*.cardmarket.com/*"
+    "*://*.cardmarket.com/*",
+    "*://*.mtgdecks.net/*",
+    "*://*.mtggoldfish.com/*",
+    "*://*.magic.gg/*",
+    "*://*.wizards.com/*",
+    "https://api.scryfall.com/*"
   ],
   "background": {
     "service_worker": "background.js"
