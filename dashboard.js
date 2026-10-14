@@ -377,3 +377,82 @@ document.addEventListener("DOMContentLoaded", renderStoredDatasets);
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') renderStoredDatasets();
 });
+
+
+// --- Mirror Pool Scout: Live Scryfall Arbitrage & Storage Sync ---
+function refreshArbitrageWithScryfall() {
+    chrome.storage.local.get(["currentDecklist"], (result) => {
+        const decklist = result.currentDecklist || [];
+        if (decklist.length === 0) return;
+
+        const names = decklist.map(c => c.cardName);
+        chrome.runtime.sendMessage({ action: "fetchCollectionPrices", cardNames: names }, (res) => {
+            const priceMap = (res && res.prices) ? res.prices : {};
+            let totalPaperCost = 0;
+            let totalMtgoTix = 0;
+            const tixToUsdRate = 0.92;
+
+            decklist.forEach(card => {
+                const key = (card.cardName || "").toLowerCase();
+                const entry = priceMap[key] || { usd: 0, tix: 0 };
+                totalPaperCost += entry.usd * (card.quantity || 1);
+                totalMtgoTix += entry.tix * (card.quantity || 1);
+            });
+
+            const mtgoConvertedUsd = totalMtgoTix * tixToUsdRate;
+            const absoluteDelta = totalPaperCost - mtgoConvertedUsd;
+            const percentageDelta = totalPaperCost > 0 ? (absoluteDelta / totalPaperCost) * 100 : 0;
+
+            const hudPaper = document.getElementById("hud-paper");
+            const hudMtgo = document.getElementById("hud-mtgo");
+            if (hudPaper) hudPaper.innerText = "$" + totalPaperCost.toFixed(2);
+            if (hudMtgo) hudMtgo.innerText = totalMtgoTix.toFixed(2) + " TIX";
+
+            if (typeof updateMetricsHUD === "function") {
+                updateMetricsHUD({
+                    paperValue: totalPaperCost.toFixed(2),
+                    mtgoValue: totalMtgoTix.toFixed(2),
+                    deltaUsd: absoluteDelta.toFixed(2),
+                    deltaPercent: percentageDelta.toFixed(1)
+                });
+            }
+        });
+    });
+}
+
+function renderMigratedStorage() {
+    chrome.storage.local.get(["watchlist_cards", "card_chase"], (res) => {
+        const chaseEl = document.getElementById("chase-container") || document.querySelector(".chase-grid");
+        if (chaseEl && Array.isArray(res.card_chase) && res.card_chase.length > 0) {
+            chaseEl.innerHTML = res.card_chase.map(item => `
+                <div class="card" style="padding:10px; margin-bottom:8px; border:1px solid #334155; border-radius:6px; background:#0b1120;">
+                    <div style="color:#38bdf8; font-weight:700; font-size:13px;">${item.cardName || item.title || "Target Card"}</div>
+                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">${item.metricA || "Price"}: <span style="color:#f59e0b;">${item.valueA || item.paperPrice || "N/A"}</span></div>
+                    <div style="font-size:11px; color:#94a3b8;">${item.metricB || "Spread"}: <span style="color:#10b981;">${item.valueB || item.mtgoPrice || "N/A"}</span></div>
+                </div>
+            `).join("");
+        }
+
+        const watchEl = document.getElementById("watchlist-container") || document.querySelector(".watchlist-grid");
+        if (watchEl && Array.isArray(res.watchlist_cards) && res.watchlist_cards.length > 0) {
+            watchEl.innerHTML = res.watchlist_cards.map(item => `
+                <div class="card" style="padding:10px; margin-bottom:8px; border:1px solid #334155; border-radius:6px; background:#0b1120;">
+                    <div style="color:#10b981; font-weight:700; font-size:13px;">${item.cardName || item.title || "Watchlist Item"}</div>
+                    <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Paper: <span style="color:#f59e0b;">${item.paperPrice || item.valueA || "N/A"}</span> | MTGO: <span style="color:#3b82f6;">${item.mtgoPrice || item.valueB || "N/A"}</span></div>
+                </div>
+            `).join("");
+        }
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    refreshArbitrageWithScryfall();
+    renderMigratedStorage();
+});
+
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === "local") {
+        if (changes.currentDecklist) refreshArbitrageWithScryfall();
+        if (changes.watchlist_cards || changes.card_chase) renderMigratedStorage();
+    }
+});
