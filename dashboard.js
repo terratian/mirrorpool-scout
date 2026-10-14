@@ -361,7 +361,7 @@ function renderProcurementAndArbitrage(targets, watchlistItems, deckMeta) {
             });
         }
 
-        // Update #tab-arbitrage HUD & Spread Grid
+        // Update #tab-arbitrage HUD & Spread Grid (Integrating Watchlist Deals + Cross-Platform Signals)
         const mtgoUsd = totalMtgoTixRemaining * TIX_TO_USD;
         const spreadUsd = totalPaperRemaining - mtgoUsd;
         const spreadPct = totalPaperRemaining > 0 ? (spreadUsd / totalPaperRemaining) * 100 : 0;
@@ -374,17 +374,75 @@ function renderProcurementAndArbitrage(targets, watchlistItems, deckMeta) {
         }
 
         if (arbGrid) {
-            arbGrid.innerHTML = targets.map(item => {
+            // Map bookmarked watchlist deals by card name for instant cross-referencing
+            const watchlistByCard = {};
+            (watchlistItems || []).forEach(w => {
+                const k = (w.cardName || w.title || "").toLowerCase().trim();
+                if (k) watchlistByCard[k] = w;
+            });
+
+            // Combine decklist targets + standalone bookmarked watchlist cards so every deal appears on Arbitrage Desk
+            const combinedArbItems = [...targets];
+            (watchlistItems || []).forEach(w => {
+                const wName = (w.cardName || w.title || "").trim();
+                if (wName && !combinedArbItems.some(t => (t.cardName || "").toLowerCase().trim() === wName.toLowerCase())) {
+                    combinedArbItems.push({ cardName: wName, quantity: 1, fromWatchlist: true, watchRecord: w });
+                }
+            });
+
+            arbGrid.innerHTML = combinedArbItems.map(item => {
                 const name = item.cardName || "Unknown Card";
-                const scry = priceMap[name.toLowerCase()] || { usd: 0, tix: 0 };
-                const tixUsd = (scry.tix || 0) * TIX_TO_USD;
-                const unitSpread = (scry.usd || 0) - tixUsd;
+                const key = name.toLowerCase().trim();
+                const scry = priceMap[key] || { usd: 0, tix: 0 };
+                const wMatch = item.watchRecord || watchlistByCard[key];
+
+                const paperFloor = scry.usd > 0 ? scry.usd : parsePrice(wMatch?.marketFloor);
+                const tix = scry.tix || 0;
+                const tixUsd = tix * TIX_TO_USD;
+                const unitSpread = paperFloor - tixUsd;
+                const spreadPctCard = paperFloor > 0 ? (unitSpread / paperFloor) * 100 : 0;
+
+                // Check if user has a live under-market eBay/Watchlist bookmark for this card
+                const listedCost = wMatch ? parsePrice(wMatch.price || wMatch.totalCost || wMatch.valueA) : 0;
+                const hasLiveFlip = wMatch && listedCost > 0 && paperFloor > listedCost;
+                const flipProfit = hasLiveFlip ? (paperFloor - listedCost) : 0;
+                const flipPct = hasLiveFlip && paperFloor > 0 ? (flipProfit / paperFloor) * 100 : 0;
+
+                // Determine Arbitrage Opportunity Signal Badge
+                let signalBadge = "";
+                let borderColor = "#1e293b";
+
+                if (hasLiveFlip && flipPct >= 15) {
+                    borderColor = "#10b981";
+                    signalBadge = `<div style="background:rgba(16,185,129,0.18); border:1px solid #10b981; color:#10b981; padding:5px 8px; border-radius:4px; font-size:11px; font-weight:800; margin-bottom:8px; text-align:center;">🔥 LIVE EBAY ARBITRAGE: +$${flipProfit.toFixed(2)}/ea (${flipPct.toFixed(0)}% UNDER FLOOR)</div>`;
+                } else if (unitSpread >= 5.0 && spreadPctCard >= 25) {
+                    borderColor = "#f59e0b";
+                    signalBadge = `<div style="background:rgba(245,158,11,0.15); border:1px solid #f59e0b; color:#f59e0b; padding:5px 8px; border-radius:4px; font-size:11px; font-weight:800; margin-bottom:8px; text-align:center;">💎 DIGITAL ➔ PAPER ARB: +$${unitSpread.toFixed(2)}/ea (${spreadPctCard.toFixed(0)}% SPREAD)</div>`;
+                } else if (unitSpread <= -1.0) {
+                    borderColor = "#38bdf8";
+                    signalBadge = `<div style="background:rgba(56,189,248,0.15); border:1px solid #38bdf8; color:#38bdf8; padding:5px 8px; border-radius:4px; font-size:11px; font-weight:800; margin-bottom:8px; text-align:center;">⚡ PAPER UNDER DIGITAL: BUY PAPER / SELL MTGO ($${Math.abs(unitSpread).toFixed(2)} EDGE)</div>`;
+                } else {
+                    signalBadge = `<div style="background:#070d17; border:1px solid #1e293b; color:#64748b; padding:5px 8px; border-radius:4px; font-size:11px; font-weight:700; margin-bottom:8px; text-align:center;">⚖️ PARITY MARKET (LOW ARBITRAGE SPREAD)</div>`;
+                }
+
+                const encoded = encodeURIComponent(name);
+                const actionUrl = wMatch?.url || `https://www.ebay.com/sch/i.html?_nkw=MTG+${encoded}&LH_BIN=1&_sop=15`;
+                const actionLabel = wMatch?.url ? "🎯 Open Bookmarked Deal ($" + listedCost.toFixed(2) + ") ↗" : "🔍 Hunt eBay Low BIN ↗";
+
                 return `
-                    <div style="background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:12px;">
-                        <div style="font-weight:700; color:#38bdf8; font-size:13px; margin-bottom:6px;">${escapeHtml(name)} (x${item.quantity || 1})</div>
-                        <div style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between;"><span>Paper Floor:</span><strong style="color:#10b981;">$${(scry.usd || 0).toFixed(2)}</strong></div>
-                        <div style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between;"><span>MTGO TIX:</span><strong style="color:#3b82f6;">${(scry.tix || 0).toFixed(2)} ($${tixUsd.toFixed(2)})</strong></div>
-                        <div style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; margin-top:4px; padding-top:4px; border-top:1px solid #1e293b;"><span>Net Unit Delta:</span><strong style="color:${unitSpread >= 0 ? "#f59e0b" : "#ef4444"};">${unitSpread >= 0 ? "+" : "-"}$${Math.abs(unitSpread).toFixed(2)}</strong></div>
+                    <div style="background:#0b1120; border:1px solid ${borderColor}; border-radius:8px; padding:14px; display:flex; flex-direction:column; justify-content:space-between;">
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <span style="font-weight:700; color:#38bdf8; font-size:14px;">${escapeHtml(name)} (x${item.quantity || 1})</span>
+                                ${wMatch ? `<span style="font-size:10px; background:#065f46; color:#10b981; padding:2px 6px; border-radius:4px; font-weight:700;">BOOKMARKED</span>` : ""}
+                            </div>
+                            ${signalBadge}
+                            <div style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; margin-bottom:3px;"><span>Paper Floor:</span><strong style="color:#10b981;">$${paperFloor.toFixed(2)}</strong></div>
+                            ${hasLiveFlip ? `<div style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; margin-bottom:3px;"><span>Bookmarked eBay Cost:</span><strong style="color:#00ffcc;">$${listedCost.toFixed(2)} (Save$${flipProfit.toFixed(2)})</strong></div>` : ""}
+                            <div style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; margin-bottom:3px;"><span>MTGO TIX:</span><strong style="color:#3b82f6;">${tix.toFixed(2)} ($${tixUsd.toFixed(2)})</strong></div>
+                            <div style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; margin-top:4px; padding-top:4px; border-top:1px solid #1e293b;"><span>Paper vs. MTGO Delta:</span><strong style="color:${unitSpread >= 0 ? "#f59e0b" : "#38bdf8"};">${unitSpread >= 0 ? "+" : "-"}$${Math.abs(unitSpread).toFixed(2)}</strong></div>
+                        </div>
+                        <a href="${escapeHtml(actionUrl)}" target="_blank" style="margin-top:10px; display:block; text-align:center; background:#1e293b; color:#f8fafc; text-decoration:none; padding:6px; border-radius:4px; font-size:11px; font-weight:700; border:1px solid #334155;">${actionLabel}</a>
                     </div>
                 `;
             }).join("");
