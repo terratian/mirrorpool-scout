@@ -18,7 +18,7 @@ cp manifest.json background.js content.js dashboard.html dashboard.js dist/
 [ -f "popup.js" ] && cp popup.js dist/
 [ -f "metrics-schema.js" ] && cp metrics-schema.js dist/
 [ -f "mtgdecks-scraper.js" ] && cp mtgdecks-scraper.js dist/
-for icon in icon16.png icon48.png icon128.png; do
+for icon in icon16.png icon48.png icon128.png mpsbanner1mb.png; do
     [ -f "$icon" ] && cp "$icon" dist/
 done
 

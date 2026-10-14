@@ -458,7 +458,7 @@ function applyWatermarkState(isLicensed) {
         wm = document.createElement("div");
         wm.id = "mp-watermark";
         wm.style.cssText = "position:fixed; inset:0; pointer-events:none; z-index:0; display:flex; align-items:center; justify-content:center; opacity:0.08;";
-        wm.innerHTML = `<img src="mpscoutlogo.svg" onerror="this.src=\"icon128.png\"" style="width:420px; max-width:60vw; filter:grayscale(20%);" alt="">`;
+        wm.innerHTML = `<img src="mpsbanner1mb.png" style="width:420px; max-width:60vw; filter:grayscale(20%);" alt="">`;
         document.body.appendChild(wm);
     }
     if (wm) wm.style.display = isLicensed ? "none" : "flex";
