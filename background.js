@@ -90,7 +90,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     if (card.object === "error") {
                         sendResponse({ found: false, error: card.details || "Could not match card" });
                     } else {
-                        const isFoilListing = /\bfoil\b/i.test(rawTitle) && !/\bnon[-\s]?foil\b/i.test(rawTitle);
+                        const isFoilListing = typeof message.foil === "boolean"
+                            ? message.foil
+                            : (/\bfoil\b/i.test(rawTitle) && !/\bnon[-\s]?foil\b/i.test(rawTitle));
                         const bestUsd = isFoilListing
                             ? (card.prices?.usd_foil || card.prices?.usd || "0.00")
                             : (card.prices?.usd || card.prices?.usd_foil || "0.00");
