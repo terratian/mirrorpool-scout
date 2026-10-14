@@ -40,41 +40,79 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     // 2. Single Card Fuzzy Lookup (for eBay Content Script Badge)
-    if (message.action === "fetchComps") {
-        const rawTitle = message.cardTitle || "";
-        const cleanName = rawTitle
-            .replace(/^(MTG|Magic: The Gathering|NM|LP|MP|HP|Foil)\s*[-|:]?\s*/ig, "")
-            .replace(/\[.*?\]|\(.*?\)/g, "")
-            .split(/[-|/]/)[0]
-            .trim();
+        if (message.action === "fetchComps") {
+            const rawTitle = (message.cardTitle || "").trim();
 
-        if (!cleanName) {
-            sendResponse({ found: false, error: "Empty card name after cleanup" });
-            return;
+            function sanitizeEbayCardTitle(raw) {
+                let s = raw
+                    // Strip leading prefixes like MTG, MGT, Magic: The Gathering, NM, Foil
+                    .replace(/^(?:MTG|MGT|Magic:?\s*The\s*Gathering|NM|LP|MP|HP|Mint|Near\s*Mint|Foil|Non-?Foil|1x|2x|3x|4x|x?\d+x?)\b[\s\-|:•]*/ig, "")
+                    .trim();
+
+                // If the card name is followed by (Set/Number) or [Set/Number], e.g. "Thoughtseize (M 0020) NM R..."
+                const beforeParen = s.split(/\s*[\(\[#]/)[0].trim();
+                if (beforeParen.length >= 3 && !/^(?:MTG|MGT|Magic|Commander|Standard|Modern)$/i.test(beforeParen)) {
+                    s = beforeParen;
+                }
+
+                // Cut off at the first condition / rarity / set-code marker in the remaining title
+                s = s.split(/\b(?:NM|LP|MP|HP|DMG|Near\s*Mint|Lightly\s*Played|MTG|MGT|Foil|Non-?Foil|Outlaws\s*of|Commander|Secret\s*Lair|Borderless|Extended\s*Art|Showcase|Retro\s*Frame|[A-Z]{3}-\d+|#?\d{2,4}\/\d{2,4}|\b[MRUC]\s+\d{3,4})\b/i)[0];
+
+                // Strip trailing single-letter rarity/condition tokens (e.g. " NM", " R", " M")
+                s = s.replace(/\s+\b(?:NM|LP|MP|HP|M|R|U|C)\b\s*$/ig, "").trim();
+                return s.replace(/[\-|:\/]+$/, "").trim();
+            }
+
+            const cleanName = sanitizeEbayCardTitle(rawTitle);
+            if (!cleanName) {
+                sendResponse({ found: false, error: "Empty card name after cleanup" });
+                return;
+            }
+
+            (async () => {
+                try {
+                    // Attempt 1: Exact/Fuzzy named lookup on sanitized name
+                    let res = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cleanName)}`);
+                    let card = await res.json();
+
+                    // Attempt 2: If still noisy, try the first 1-3 words via fuzzy lookup
+                    if (card.object === "error") {
+                        const words = cleanName.split(/\s+/);
+                        for (let len = Math.min(3, words.length); len >= 1; len--) {
+                            const candidate = words.slice(0, len).join(" ");
+                            if (candidate.length < 3) continue;
+                            res = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(candidate)}`);
+                            card = await res.json();
+                            if (card.object !== "error") break;
+                        }
+                    }
+
+                    if (card.object === "error") {
+                        sendResponse({ found: false, error: card.details || "Could not match card" });
+                    } else {
+                        const isFoilListing = /\bfoil\b/i.test(rawTitle) && !/\bnon[-\s]?foil\b/i.test(rawTitle);
+                        const bestUsd = isFoilListing
+                            ? (card.prices?.usd_foil || card.prices?.usd || "0.00")
+                            : (card.prices?.usd || card.prices?.usd_foil || "0.00");
+
+                        sendResponse({
+                            found: true,
+                            name: card.name,
+                            usd: bestUsd,
+                            usd_foil: card.prices?.usd_foil || "0.00",
+                            tix: card.prices?.tix || "0.00",
+                            uri: card.scryfall_uri,
+                            tcgplayer_url: card.purchase_uris?.tcgplayer || ""
+                        });
+                    }
+                } catch (err) {
+                    sendResponse({ found: false, error: err.message });
+                }
+            })();
+            return true;
         }
 
-        fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cleanName)}`)
-            .then(res => res.json())
-            .then(card => {
-                if (card.object === "error") {
-                    sendResponse({ found: false, error: card.details });
-                } else {
-                    sendResponse({
-                        found: true,
-                        name: card.name,
-                        usd: card.prices?.usd || card.prices?.usd_foil || "0.00",
-                        usd_foil: card.prices?.usd_foil || "0.00",
-                        tix: card.prices?.tix || "0.00",
-                        uri: card.scryfall_uri,
-                        tcgplayer_url: card.purchase_uris?.tcgplayer || ""
-                    });
-                }
-            })
-            .catch(err => sendResponse({ found: false, error: err.message }));
-        return true;
-    }
-
-    // 3. Batch Collection Lookup (Up to 75 cards per request for Decklists & Arbitrage)
+        // 3. Batch Collection Lookup (Up to 75 cards per request for Decklists & Arbitrage)
     if (message.action === "fetchCollectionPrices") {
         const cardNames = message.cardNames || [];
         if (cardNames.length === 0) {

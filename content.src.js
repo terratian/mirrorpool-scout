@@ -1,3 +1,19 @@
+
+function extractBestEbayCardName(rawTitle) {
+    // 1. Check eBay Item Specifics table for explicit "Card Name" label
+    const labels = Array.from(document.querySelectorAll(".ux-labels-values__labels, .ux-labels-values__labels-content, dt"));
+    for (const lbl of labels) {
+        if (/^card\s*name:?$/i.test(lbl.innerText.trim())) {
+            const container = lbl.closest(".ux-labels-values, dl, tr") || lbl.parentElement;
+            const valEl = container ? container.querySelector(".ux-labels-values__values, dd, td:last-child") : lbl.nextElementSibling;
+            if (valEl && valEl.innerText.trim()) {
+                return valEl.innerText.trim();
+            }
+        }
+    }
+    return rawTitle;
+}
+
 // Mirror Pool Scout - Marketplace Inspector & Overlay
 
 (() => {
