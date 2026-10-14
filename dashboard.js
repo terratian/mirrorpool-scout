@@ -441,36 +441,75 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 });
 
 
-// 7. Wire #tab-settings (Gumroad License Verification & TIX Rate Config)
+
+// 7. Wire #tab-settings & Standalone Watermark / Banner Removal
+function applyWatermarkState(isLicensed) {
+    // Target any existing or injected watermark / banner elements
+    const wmSelectors = [".watermark", ".watermark-overlay", "#mp-watermark", ".support-banner", "#mp-support-banner"];
+    wmSelectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => {
+            el.style.display = isLicensed ? "none" : "";
+        });
+    });
+
+    // Ensure the watermark & bottom banner exist when unlicensed (matching Screenshot 14)
+    let wm = document.getElementById("mp-watermark");
+    if (!wm && !document.querySelector(".watermark, .watermark-overlay")) {
+        wm = document.createElement("div");
+        wm.id = "mp-watermark";
+        wm.style.cssText = "position:fixed; inset:0; pointer-events:none; z-index:0; display:flex; align-items:center; justify-content:center; opacity:0.08;";
+        wm.innerHTML = `<img src="mpscoutlogo.svg" onerror="this.src=\"icon128.png\"" style="width:420px; max-width:60vw; filter:grayscale(20%);" alt="">`;
+        document.body.appendChild(wm);
+    }
+    if (wm) wm.style.display = isLicensed ? "none" : "flex";
+
+    let banner = document.getElementById("mp-support-banner");
+    if (!banner && !document.querySelector(".support-banner")) {
+        banner = document.createElement("div");
+        banner.id = "mp-support-banner";
+        banner.style.cssText = "position:fixed; bottom:0; left:0; right:0; z-index:999; background:rgba(3,7,18,0.95); border-top:1px solid #1e293b; padding:8px 16px; text-align:center; font-size:12px; color:#cbd5e1;";
+        banner.innerHTML = `<strong>Alpha Build:</strong> Feel free to use the app! Snag a <a href="#" id="banner-key-link" style="color:#10b981; font-weight:700; text-decoration:underline;">$9 Lifetime Key</a> to remove the watermark and support an out-of-work solo developer building rad tools for all your TCG needs.`;
+        document.body.appendChild(banner);
+        const link = banner.querySelector("#banner-key-link");
+        if (link) {
+            link.addEventListener("click", (e) => {
+                e.preventDefault();
+                document.querySelectorAll(".tab-panel").forEach(p => p.classList.toggle("active", p.id === "tab-settings"));
+            });
+        }
+    }
+    if (banner) banner.style.display = isLicensed ? "none" : "block";
+}
+
 function initSettingsPanel() {
     const settingsPanel = document.getElementById("tab-settings");
-    if (!settingsPanel) return;
-
-    chrome.storage.local.get(["licenseKey", "licenseValid", "customTixRate"], (res) => {
-        const isUnlocked = Boolean(res.licenseValid);
+    chrome.storage.local.get(["licenseKey", "licenseValid"], (res) => {
+        const isLicensed = Boolean(res.licenseValid);
         const savedKey = res.licenseKey || "";
-        const savedRate = res.customTixRate || 0.92;
+
+        applyWatermarkState(isLicensed);
+        if (!settingsPanel) return;
 
         settingsPanel.innerHTML = `
-            <div style="background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:18px; max-width:520px; display:flex; flex-direction:column; gap:14px;">
+            <div style="background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:18px; max-width:540px; display:flex; flex-direction:column; gap:14px; position:relative; z-index:2;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <strong style="color:#38bdf8; font-size:15px;">🔑 Mirror Pool Scout — Alpha License</strong>
-                    <span id="lic-badge" style="font-size:11px; padding:3px 8px; border-radius:4px; font-weight:700; background:${isUnlocked ? "#065f46" : "#78350f"}; color:${isUnlocked ? "#10b981" : "#f59e0b"};">
-                        ${isUnlocked ? "✅ FOUNDER LICENSE ACTIVE" : "🔒 ALPHA EVAL MODE"}
+                    <strong style="color:#10b981; font-size:15px;">🔑 Mirror Pool Scout (Standalone) — Lifetime Key</strong>
+                    <span style="font-size:11px; padding:3px 8px; border-radius:4px; font-weight:700; background:${isLicensed ? "#065f46" : "#1e293b"}; color:${isLicensed ? "#10b981" : "#f59e0b"};">
+                        ${isLicensed ? "✅ WATERMARK REMOVED (LIFETIME)" : "💧 WATERMARKED ALPHA BUILD"}
                     </span>
                 </div>
                 <div style="font-size:12px; color:#94a3b8; line-height:1.5;">
-                    Unlock full unlimited decklist procurement, clean mass-entry exports, and remove evaluation watermarks with a <strong>$9 Lifetime Alpha License</strong>.
+                    All standalone features in <strong>Mirror Pool Scout</strong> are 100% unlocked. Enter your <strong>$9.00 Lifetime Key</strong> below to permanently remove the background watermark and bottom supporter banner.
                 </div>
                 <div style="display:flex; gap:8px;">
-                    <input type="text" id="gumroad-key-input" value="${escapeHtml(savedKey)}" placeholder="Enter Gumroad License Key (e.g. MP-XXXX-XXXX)" style="flex:1; background:#070d17; border:1px solid #334155; color:#f8fafc; padding:8px; border-radius:4px; font-size:12px;">
-                    <button id="verify-key-btn" style="background:#10b981; color:#030712; border:none; padding:8px 14px; border-radius:4px; font-weight:700; font-size:12px; cursor:pointer;">Activate</button>
+                    <input type="text" id="gumroad-key-input" value="${escapeHtml(savedKey)}" placeholder="Enter $9 Lifetime Key (e.g. MPSCOUT-XXXX-XXXX)" style="flex:1; background:#070d17; border:1px solid #334155; color:#f8fafc; padding:8px; border-radius:4px; font-size:12px;">
+                    <button id="verify-key-btn" style="background:#10b981; color:#030712; border:none; padding:8px 14px; border-radius:4px; font-weight:700; font-size:12px; cursor:pointer;">${isLicensed ? "Update Key" : "Remove Watermark"}</button>
                 </div>
                 <div id="lic-status-msg" style="font-size:11px; color:#94a3b8;"></div>
                 <hr style="border:none; border-top:1px solid #1e293b; margin:4px 0;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:12px; color:#cbd5e1;">Need a key? Get the $9 Lifetime Alpha on Gumroad:</span>
-                    <a href="https://gumroad.com" target="_blank" style="background:#3b82f6; color:#fff; text-decoration:none; padding:6px 12px; border-radius:4px; font-size:12px; font-weight:600;">Get $9 Lifetime Key ↗</a>
+                    <span style="font-size:12px; color:#cbd5e1;">Support solo development & strip the watermark:</span>
+                    <a href="https://gumroad.com" target="_blank" style="background:#10b981; color:#030712; text-decoration:none; padding:6px 12px; border-radius:4px; font-size:12px; font-weight:700;">Snag $9 Lifetime Key ↗</a>
                 </div>
             </div>
         `;
@@ -480,25 +519,16 @@ function initSettingsPanel() {
         const statusMsg = document.getElementById("lic-status-msg");
 
         if (verifyBtn && keyInput) {
-            verifyBtn.addEventListener("click", async () => {
+            verifyBtn.addEventListener("click", () => {
                 const key = keyInput.value.trim();
-                if (!key) {
-                    statusMsg.innerText = "Please enter a valid license key.";
-                    statusMsg.style.color = "#ef4444";
-                    return;
-                }
-                verifyBtn.innerText = "Checking...";
-                // Supports offline Founder prefix (MP-FOUNDER-*) or live Gumroad API verification
-                if (key.toUpperCase().startsWith("MP-") && key.length >= 10) {
+                if (key.length >= 8) {
                     chrome.storage.local.set({ licenseKey: key, licenseValid: true }, () => {
-                        statusMsg.innerText = "License activated! Thank you for supporting Mirror Pool Scout.";
-                        statusMsg.style.color = "#10b981";
+                        applyWatermarkState(true);
                         initSettingsPanel();
                     });
                 } else {
-                    statusMsg.innerText = "Invalid key format. Keys begin with MP- or match your Gumroad receipt.";
+                    statusMsg.innerText = "Please enter your valid Gumroad Lifetime Key.";
                     statusMsg.style.color = "#ef4444";
-                    verifyBtn.innerText = "Activate";
                 }
             });
         }
