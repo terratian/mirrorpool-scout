@@ -41,7 +41,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // 2. Single Card Fuzzy Lookup (for eBay Content Script Badge)
         if (message.action === "fetchComps") {
-            const rawTitle = (message.cardTitle || "").trim();
+            const rawTitle = (message.cardName || message.cardTitle || "").trim();
 
             function sanitizeEbayCardTitle(raw) {
                 let s = raw
@@ -101,8 +101,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             usd: bestUsd,
                             usd_foil: card.prices?.usd_foil || "0.00",
                             tix: card.prices?.tix || "0.00",
+                            eur: card.prices?.eur || "N/A",
+                            prices: { usd: bestUsd, usd_foil: card.prices?.usd_foil || "0.00", tix: card.prices?.tix || "0.00", eur: card.prices?.eur || "N/A" },
                             uri: card.scryfall_uri,
-                            tcgplayer_url: card.purchase_uris?.tcgplayer || ""
+                            tcgplayer_url: card.purchase_uris?.tcgplayer || "",
+                            tcg_url: card.purchase_uris?.tcgplayer || `https://www.tcgplayer.com/search/magic/product?q=${encodeURIComponent(card.name)}`,
+                            cm_url: card.purchase_uris?.cardmarket || `https://www.cardmarket.com/en/Magic/Products/Search?searchString=${encodeURIComponent(card.name)}`
                         });
                     }
                 } catch (err) {
