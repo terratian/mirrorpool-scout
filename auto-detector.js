@@ -218,27 +218,28 @@
                         </div>
                     </div>
                     <div>
-                        <div style="font-size:9px; color:#94a3b8; text-transform:uppercase;">${data.isDeck ? "Top Chase Target" : "Active Deck Status"}</div>
-                        <div style="color:#eab308; font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${sniperCardName}">
-                            ${data.isDeck && data.highestCard.name
-                                ? `${data.highestCard.name} ($${data.highestCard.price.toFixed(2)})`
-                                : (ownedMap.has(data.title.toLowerCase()) ? "🎯 In Your Procurement List!" : "Not in Active Deck")}
+                        <div style="font-size:9px; color:#94a3b8; text-transform:uppercase;">${data.isDeck ? "Top Chase Target (eBay Sniper)" : "Active Deck Status"}</div>
+                        <div id="mp-val-4" style="color:#eab308; font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            ${data.isDeck ? "⏳ Ranking Chase Cards..." : (ownedMap.has(data.title.toLowerCase()) ? "🎯 In Your Procurement List!" : "Ready to Snipe")}
                         </div>
                     </div>
                 </div>
 
                 <!-- Unified Action Bar -->
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <button id="mp-act-primary" style="flex:1.3; padding:8px 10px; border-radius:5px; background:#10b981; border:none; color:#030712; font-weight:800; font-size:11px; cursor:pointer;">
-                        ${data.isDeck ? `⚡ Import ${data.decklist.length} Unique Cards to Procurement` : "📥 + Save to Watchlist"}
+                    <button id="mp-act-primary" style="flex:1.2; padding:8px 10px; border-radius:5px; background:#10b981; border:none; color:#030712; font-weight:800; font-size:11px; cursor:pointer;">
+                        ${data.isDeck ? `⚡ Import ${data.decklist.length} Cards` : "📥 + Watchlist"}
                     </button>
-                    <button id="mp-act-secondary" style="flex:1; padding:8px 10px; border-radius:5px; background:#1e293b; border:1px solid #334155; color:#f8fafc; font-weight:700; font-size:11px; cursor:pointer;">
-                        ${data.isDeck ? "📋 Copy Clean MTGA List" : "🎯 + Add to Procurement"}
+                    <button id="mp-act-secondary" style="flex:0.9; padding:8px 10px; border-radius:5px; background:#1e293b; border:1px solid #334155; color:#f8fafc; font-weight:700; font-size:11px; cursor:pointer;">
+                        ${data.isDeck ? "📋 Copy MTGA" : "🎯 + Procurement"}
                     </button>
-                    <a href="${ebaySniperUrl}" target="_blank" style="flex:1; padding:8px 10px; border-radius:5px; background:#1e293b; border:1px solid #f59e0b; color:#f59e0b; font-weight:700; font-size:11px; text-decoration:none; text-align:center;">
-                        🔍 Snipe ${data.isDeck && data.highestCard.name ? data.highestCard.name.split(",")[0] : "on eBay"} BIN ↗
+                    <a id="mp-snipe-bin" href="${ebaySniperUrl}" target="_blank" style="flex:1.2; padding:8px 10px; border-radius:5px; background:#1e293b; border:1px solid #f59e0b; color:#f59e0b; font-weight:700; font-size:11px; text-decoration:none; text-align:center;">
+                        🎯 Snipe <85% Floor BIN ↗
                     </a>
-                    <button id="mp-act-dash" style="flex:0.8; padding:8px 10px; border-radius:5px; background:rgba(0,255,204,0.08); border:1px solid #00ffcc; color:#00ffcc; font-weight:700; font-size:11px; cursor:pointer;">
+                    <a id="mp-snipe-auc" href="${ebaySniperUrl}" target="_blank" style="flex:1; padding:8px 10px; border-radius:5px; background:#1e293b; border:1px solid #38bdf8; color:#38bdf8; font-weight:700; font-size:11px; text-decoration:none; text-align:center;">
+                        ⏱ Ending Auctions ↗
+                    </a>
+                    <button id="mp-act-dash" style="flex:0.7; padding:8px 10px; border-radius:5px; background:rgba(0,255,204,0.08); border:1px solid #00ffcc; color:#00ffcc; font-weight:700; font-size:11px; cursor:pointer;">
                         ⛶ Dashboard
                     </button>
                 </div>
@@ -265,24 +266,88 @@
                         if (v1) v1.innerText = `$${scryUsd.toFixed(2)} (Scryfall)`;
                         if (v2) v2.innerText = `$${tixUsd.toFixed(2)} (${scryTix.toFixed(2)} TIX)`;
                         if (v3) v3.innerText = `${delta >= 0 ? "+" : "-"}$${Math.abs(delta).toFixed(2)} Spread`;
+                        const maxSnipe = Math.max(0.99, scryUsd * 0.85).toFixed(2);
+                        const q = encodeURIComponent(`MTG "${data.title}" -proxy -custom`);
+                        const binL = container.querySelector("#mp-snipe-bin");
+                        const aucL = container.querySelector("#mp-snipe-auc");
+                        if (binL) {
+                            binL.href = `https://www.ebay.com/sch/i.html?_nkw=${q}&_sacat=19107&LH_BIN=1&_sop=15&_udhi=${maxSnipe}`;
+                            binL.innerText = `🎯 Snipe <$${maxSnipe} BIN ↗`;
+                        }
+                        if (aucL) {
+                            aucL.href = `https://www.ebay.com/sch/i.html?_nkw=${q}&_sacat=19107&LH_Auction=1&_sop=1&_udhi=${maxSnipe}`;
+                            aucL.innerText = `⏱ Auctions <$${maxSnipe} ↗`;
+                        }
                     }
                 });
-            } else if (data.isDeck && data.paperVal === 0 && data.decklist.length > 0) {
-                // On MTGDecks, compute live Scryfall Deck Total + MTGO TIX Cash-Out automatically!
+            } else if (data.isDeck && data.decklist.length > 0) {
+                // Always query Scryfall for the deck so we get exact Spread + Top 5 Expensive Chase Cards for eBay Sniping!
                 const names = data.decklist.map(c => c.cardName);
                 chrome.runtime.sendMessage({ action: "fetchCollectionPrices", cardNames: names }, (res) => {
                     const priceMap = (res && res.prices) ? res.prices : {};
                     let sumUsd = 0, sumTix = 0;
+                    const pricedCards = [];
+
                     data.decklist.forEach(c => {
                         const p = priceMap[c.cardName.toLowerCase()] || { usd: 0, tix: 0 };
-                        sumUsd += (p.usd || 0) * c.quantity;
+                        const unitUsd = p.usd || 0;
+                        sumUsd += unitUsd * c.quantity;
                         sumTix += (p.tix || 0) * c.quantity;
+                        if (unitUsd > 0) {
+                            pricedCards.push({ name: c.cardName, usd: unitUsd, tix: p.tix || 0 });
+                        }
                     });
+
+                    // Sort descending by Scryfall USD price to find true Top Chase Targets
+                    pricedCards.sort((a, b) => b.usd - a.usd);
+                    const top5 = pricedCards.slice(0, 5);
+
                     const cashOut = sumTix * TIX_RATE;
+                    const spreadUsd = sumUsd - cashOut;
+                    const spreadPct = sumUsd > 0 ? (spreadUsd / sumUsd) * 100 : 0;
+
                     const v1 = container.querySelector("#mp-val-1");
                     const v2 = container.querySelector("#mp-val-2");
+                    const v3 = container.querySelector("#mp-val-3");
+                    const v4 = container.querySelector("#mp-val-4");
+                    const binLink = container.querySelector("#mp-snipe-bin");
+                    const aucLink = container.querySelector("#mp-snipe-auc");
+
                     if (v1) v1.innerText = `$${Math.max(0, sumUsd - ownedSavingsUsd).toFixed(2)}`;
                     if (v2) v2.innerText = `$${cashOut.toFixed(2)} (${sumTix.toFixed(1)} TIX)`;
+                    if (v3) {
+                        v3.innerText = `${spreadUsd >= 0 ? "+" : "-"}$${Math.abs(spreadUsd).toFixed(2)} (${spreadPct.toFixed(0)}%)`;
+                        v3.style.color = spreadUsd >= 0 ? "#f59e0b" : "#10b981";
+                    }
+
+                    function updateSniperLinks(cardObj) {
+                        if (!cardObj) return;
+                        // Cap eBay search at 85% of Scryfall Floor inside MTG Individual Cards (_sacat=19107)
+                        const maxSnipePrice = Math.max(0.99, cardObj.usd * 0.85).toFixed(2);
+                        const exactQuery = encodeURIComponent(`MTG "${cardObj.name}" -proxy -art -custom`);
+                        const shortName = cardObj.name.split(",")[0];
+                        if (binLink) {
+                            binLink.href = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_BIN=1&_sop=15&_udhi=${maxSnipePrice}`;
+                            binLink.innerText = `🎯 Snipe ${shortName} (<$${maxSnipePrice} BIN) ↗`;
+                        }
+                        if (aucLink) {
+                            aucLink.href = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_Auction=1&_sop=1&_udhi=${maxSnipePrice}`;
+                            aucLink.innerText = `⏱ ${shortName} Auctions (<$${maxSnipePrice}) ↗`;
+                        }
+                    }
+
+                    if (top5.length > 0 && v4) {
+                        v4.innerHTML = `<select id="mp-chase-select" style="background:#0b1120; color:#eab308; border:1px solid #334155; border-radius:4px; font-size:11px; font-weight:700; padding:2px 4px; width:100%; cursor:pointer;">` +
+                            top5.map((c, i) => `<option value="${i}">${c.name} (Floor: $${c.usd.toFixed(2)})</option>`).join("") +
+                            `</select>`;
+                        updateSniperLinks(top5[0]);
+                        const sel = v4.querySelector("#mp-chase-select");
+                        if (sel) {
+                            sel.addEventListener("change", () => {
+                                updateSniperLinks(top5[parseInt(sel.value, 10)]);
+                            });
+                        }
+                    }
                 });
             }
 
