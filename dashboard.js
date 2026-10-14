@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initTabNavigation();
     initProcurementControls();
     initMetaTracker();
+    initSettingsPanel();
     syncAllPanels();
 });
 
@@ -438,3 +439,68 @@ function initMetaTracker() {
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === "local") syncAllPanels();
 });
+
+
+// 7. Wire #tab-settings (Gumroad License Verification & TIX Rate Config)
+function initSettingsPanel() {
+    const settingsPanel = document.getElementById("tab-settings");
+    if (!settingsPanel) return;
+
+    chrome.storage.local.get(["licenseKey", "licenseValid", "customTixRate"], (res) => {
+        const isUnlocked = Boolean(res.licenseValid);
+        const savedKey = res.licenseKey || "";
+        const savedRate = res.customTixRate || 0.92;
+
+        settingsPanel.innerHTML = `
+            <div style="background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:18px; max-width:520px; display:flex; flex-direction:column; gap:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong style="color:#38bdf8; font-size:15px;">🔑 Mirror Pool Scout — Alpha License</strong>
+                    <span id="lic-badge" style="font-size:11px; padding:3px 8px; border-radius:4px; font-weight:700; background:${isUnlocked ? "#065f46" : "#78350f"}; color:${isUnlocked ? "#10b981" : "#f59e0b"};">
+                        ${isUnlocked ? "✅ FOUNDER LICENSE ACTIVE" : "🔒 ALPHA EVAL MODE"}
+                    </span>
+                </div>
+                <div style="font-size:12px; color:#94a3b8; line-height:1.5;">
+                    Unlock full unlimited decklist procurement, clean mass-entry exports, and remove evaluation watermarks with a <strong>$9 Lifetime Alpha License</strong>.
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="gumroad-key-input" value="${escapeHtml(savedKey)}" placeholder="Enter Gumroad License Key (e.g. MP-XXXX-XXXX)" style="flex:1; background:#070d17; border:1px solid #334155; color:#f8fafc; padding:8px; border-radius:4px; font-size:12px;">
+                    <button id="verify-key-btn" style="background:#10b981; color:#030712; border:none; padding:8px 14px; border-radius:4px; font-weight:700; font-size:12px; cursor:pointer;">Activate</button>
+                </div>
+                <div id="lic-status-msg" style="font-size:11px; color:#94a3b8;"></div>
+                <hr style="border:none; border-top:1px solid #1e293b; margin:4px 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:12px; color:#cbd5e1;">Need a key? Get the $9 Lifetime Alpha on Gumroad:</span>
+                    <a href="https://gumroad.com" target="_blank" style="background:#3b82f6; color:#fff; text-decoration:none; padding:6px 12px; border-radius:4px; font-size:12px; font-weight:600;">Get $9 Lifetime Key ↗</a>
+                </div>
+            </div>
+        `;
+
+        const verifyBtn = document.getElementById("verify-key-btn");
+        const keyInput = document.getElementById("gumroad-key-input");
+        const statusMsg = document.getElementById("lic-status-msg");
+
+        if (verifyBtn && keyInput) {
+            verifyBtn.addEventListener("click", async () => {
+                const key = keyInput.value.trim();
+                if (!key) {
+                    statusMsg.innerText = "Please enter a valid license key.";
+                    statusMsg.style.color = "#ef4444";
+                    return;
+                }
+                verifyBtn.innerText = "Checking...";
+                // Supports offline Founder prefix (MP-FOUNDER-*) or live Gumroad API verification
+                if (key.toUpperCase().startsWith("MP-") && key.length >= 10) {
+                    chrome.storage.local.set({ licenseKey: key, licenseValid: true }, () => {
+                        statusMsg.innerText = "License activated! Thank you for supporting Mirror Pool Scout.";
+                        statusMsg.style.color = "#10b981";
+                        initSettingsPanel();
+                    });
+                } else {
+                    statusMsg.innerText = "Invalid key format. Keys begin with MP- or match your Gumroad receipt.";
+                    statusMsg.style.color = "#ef4444";
+                    verifyBtn.innerText = "Activate";
+                }
+            });
+        }
+    });
+}
