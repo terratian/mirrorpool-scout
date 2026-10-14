@@ -1,7 +1,7 @@
-// --- Mirror Pool Scout: Non-Intrusive Scryfall-Verified Auto-Detector ---
+// --- Mirror Pool Scout: Unified Floating Frame for Flagged TCG Sites ---
 (() => {
     if (window.location.hostname.includes("ebay.com") && window.location.pathname.includes("/itm/")) {
-        return; // Leave eBay listing pages 100% to content.js Auction Tracker badge
+        return; // eBay item pages use the inline Auction Tracker badge in content.js
     }
     if (document.getElementById("mpscout-autodetect-host")) return;
 
@@ -9,7 +9,6 @@
         const deckCandidates = [];
         const seenLines = new Set();
 
-        // 1. Scan structured table rows, decklist containers, and text nodes for "Qty CardName"
         const selectors = "tr, li, .deck-list-row, .decklist-card, .card-item, .deck-table td, p, pre";
         document.querySelectorAll(selectors).forEach(el => {
             const raw = (el.innerText || "").trim().replace(/\s+/g, " ");
@@ -26,16 +25,15 @@
             }
         });
 
-        // 2. Scan primary headings & document.title for single-card pages (TCGplayer, Goldfish, Cardmarket)
         const titleCandidates = [];
         document.querySelectorAll("h1, .product-details__name, .card-name-header").forEach(h => {
             const t = (h.innerText || "").trim();
-            if (t && t.length <= 60) {
+            if (t && t.length <= 65 && !/privacy|cookie|ccpa/i.test(t)) {
                 titleCandidates.push(t.split(/[\(\[#|]/)[0].replace(/\bPrice\b/i, "").trim());
             }
         });
 
-        const docTitle = document.title.split(/[|\-—:]/)[0].split(/[\(\[#]/)[0].trim();
+        const docTitle = document.title.split(/[|\-—:]/)[0].split(/[\(\[#]/)[0].replace(/\bPrice\b/i, "").trim();
         if (docTitle) titleCandidates.push(docTitle);
 
         return { deckCandidates, titleCandidates };
@@ -56,43 +54,78 @@
             const hasSingle = Boolean(res.singleCard);
             if (!hasDeck && !hasSingle) return;
 
-            renderDetectionPill(res);
+            renderUnifiedFloatingFrame(res, hasDeck);
         });
     }
 
-    function renderDetectionPill(res) {
+    function renderUnifiedFloatingFrame(res, hasDeck) {
         if (document.getElementById("mpscout-autodetect-host")) return;
 
         const host = document.createElement("div");
         host.id = "mpscout-autodetect-host";
-        host.style.cssText = "position:fixed; top:14px; right:14px; z-index:2147483646; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
+        host.style.cssText = "position:fixed; bottom:20px; right:20px; z-index:2147483646; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
         const shadow = host.attachShadow({ mode: "open" });
 
-        const hasDeck = Array.isArray(res.decklist) && res.decklist.length >= 3;
-        const labelText = hasDeck
-            ? `Deck Detected: <strong>${res.totalCards} cards</strong> (${res.decklist.length} unique)`
-            : `Card Detected: <strong>${res.singleCard}</strong>`;
-
-        const btnLabel = hasDeck ? "⚡ Import Deck to Scout" : "🎯 Add to Watchlist";
+        const siteHost = window.location.hostname.replace(/^www\./, "").toUpperCase();
 
         shadow.innerHTML = `
-            <div style="background:#0b1120; border:1px solid #10b981; border-radius:8px; padding:8px 12px; color:#f8fafc; display:flex; align-items:center; gap:10px; box-shadow:0 10px 25px rgba(0,0,0,0.65); font-size:12px;">
-                <span style="color:#00ffcc; font-weight:800;">◈ SCOUT</span>
-                <span style="color:#cbd5e1;">${labelText}</span>
-                <button id="mp-auto-import-btn" style="background:#10b981; color:#030712; border:none; border-radius:5px; padding:5px 10px; font-weight:800; font-size:11px; cursor:pointer; white-space:nowrap;">${btnLabel}</button>
-                <button id="mp-auto-open-btn" style="background:#1e293b; color:#38bdf8; border:1px solid #334155; border-radius:5px; padding:5px 8px; font-weight:700; font-size:11px; cursor:pointer;" title="Open Dashboard">⛶</button>
-                <button id="mp-auto-close-btn" style="background:transparent; border:none; color:#64748b; font-size:14px; cursor:pointer; padding:0 4px;" title="Dismiss">✕</button>
+            <div style="background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:12px; width:285px; color:#f8fafc; box-shadow:0 12px 28px rgba(0,0,0,0.75);">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1e293b; padding-bottom:6px; margin-bottom:8px;">
+                    <span style="color:#00ffcc; font-weight:800; font-size:11px; letter-spacing:0.5px;">◈ MIRROR POOL™ SCOUT</span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:9px; color:#94a3b8; font-weight:700;">${siteHost}</span>
+                        <button id="mp-close" style="background:transparent; border:none; color:#64748b; cursor:pointer; font-size:12px; padding:0;">✕</button>
+                    </div>
+                </div>
+
+                <div style="background:#070d17; border:1px solid #1e293b; border-radius:6px; padding:8px; margin-bottom:10px; font-size:12px;">
+                    <div style="color:#38bdf8; font-weight:700; font-size:13px; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        ${hasDeck ? `Decklist (${res.totalCards} Cards / ${res.decklist.length} Unique)` : res.singleCard}
+                    </div>
+                    <div id="mp-live-metrics" style="display:flex; justify-content:space-between; font-size:11px; color:#94a3b8;">
+                        ${hasDeck
+                            ? `<span>Verified via Scryfall DB</span><strong style="color:#10b981;">Ready</strong>`
+                            : `<span>Scryfall Floor: <strong id="mp-fl" style="color:#10b981;">...</strong></span><span>MTGO: <strong id="mp-tx" style="color:#38bdf8;">...</strong></span>`
+                        }
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:6px; margin-bottom:6px;">
+                    <button id="mp-primary-btn" style="flex:1; background:#10b981; color:#030712; border:none; border-radius:4px; padding:7px 6px; font-weight:800; font-size:11px; cursor:pointer;">
+                        ${hasDeck ? "⚡ Import Deck" : "📥 + Watchlist"}
+                    </button>
+                    <button id="mp-secondary-btn" style="flex:1; background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:4px; padding:7px 6px; font-weight:700; font-size:11px; cursor:pointer;">
+                        ${hasDeck ? "📋 Copy MTGA" : "🎯 + Procurement"}
+                    </button>
+                </div>
+                <button id="mp-dash-btn" style="width:100%; background:rgba(0,255,204,0.06); border:1px solid #00ffcc; color:#00ffcc; border-radius:4px; padding:6px; font-weight:700; font-size:11px; cursor:pointer;">
+                    ⛶ Open Scout Dashboard
+                </button>
             </div>
         `;
 
         document.body.appendChild(host);
 
-        const importBtn = shadow.getElementById("mp-auto-import-btn");
-        const openBtn = shadow.getElementById("mp-auto-open-btn");
-        const closeBtn = shadow.getElementById("mp-auto-close-btn");
+        // If single card, populate live Scryfall Floor + MTGO TIX right inside the floating frame
+        if (!hasDeck && res.singleCard) {
+            chrome.runtime.sendMessage({ action: "fetchComps", cardName: res.singleCard, cardTitle: res.singleCard }, (comp) => {
+                const fl = shadow.getElementById("mp-fl");
+                const tx = shadow.getElementById("mp-tx");
+                if (comp && comp.found) {
+                    if (fl) fl.innerText = "$" + parseFloat(comp.usd || 0).toFixed(2);
+                    if (tx) tx.innerText = (comp.tix || "0.00") + " TIX";
+                }
+            });
+        }
 
-        importBtn.addEventListener("click", () => {
-            importBtn.innerText = "⏳ Importing...";
+        const primaryBtn = shadow.getElementById("mp-primary-btn");
+        const secondaryBtn = shadow.getElementById("mp-secondary-btn");
+        const dashBtn = shadow.getElementById("mp-dash-btn");
+        const closeBtn = shadow.getElementById("mp-close");
+
+        // Primary Button: "+ Watchlist" (single) OR "Import Deck" (deck)
+        primaryBtn.addEventListener("click", () => {
+            primaryBtn.innerText = "⏳ Saving...";
             chrome.runtime.sendMessage({
                 action: "importDetectedToScout",
                 mode: hasDeck ? "deck" : "single",
@@ -100,23 +133,37 @@
                 deckName: document.title.split("|")[0].trim(),
                 cardName: res.singleCard,
                 url: window.location.href
-            }, (reply) => {
-                if (reply && reply.status === "success") {
-                    importBtn.innerText = "✅ Imported to Scout!";
-                    importBtn.style.background = "#059669";
-                    importBtn.style.color = "#fff";
-                } else {
-                    importBtn.innerText = "❌ Retry";
-                }
+            }, () => {
+                primaryBtn.innerText = hasDeck ? "✓ Deck Imported" : "✓ In Watchlist";
             });
         });
 
-        openBtn.addEventListener("click", () => {
+        // Secondary Button: "+ Procurement" (single) OR "Copy MTGA" (deck)
+        secondaryBtn.addEventListener("click", () => {
+            if (hasDeck) {
+                const mtga = res.decklist.map(c => `${c.quantity} ${c.cardName}`).join("\n");
+                navigator.clipboard.writeText(mtga).then(() => {
+                    secondaryBtn.innerText = "✓ MTGA Copied!";
+                    setTimeout(() => { secondaryBtn.innerText = "📋 Copy MTGA"; }, 2000);
+                });
+            } else {
+                secondaryBtn.innerText = "⏳ Adding...";
+                chrome.runtime.sendMessage({
+                    action: "importDetectedToScout",
+                    mode: "procurement_single",
+                    cardName: res.singleCard
+                }, () => {
+                    secondaryBtn.innerText = "✓ In Procurement";
+                });
+            }
+        });
+
+        dashBtn.addEventListener("click", () => {
             chrome.runtime.sendMessage({ action: "openDashboard" });
         });
 
         closeBtn.addEventListener("click", () => host.remove());
     }
 
-    setTimeout(runDetection, 1400);
+    setTimeout(runDetection, 1300);
 })();

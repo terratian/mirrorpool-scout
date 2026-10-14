@@ -312,7 +312,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             });
             return true;
         }
-        if (mode === "single" && message.cardName) {
+                    if (mode === "procurement_single" && message.cardName) {
+                chrome.storage.local.get({ procurementTargets: [] }, (res) => {
+                    const list = Array.isArray(res.procurementTargets) ? res.procurementTargets : [];
+                    const key = message.cardName.toLowerCase().trim();
+                    const existing = list.find(c => (c.cardName || "").toLowerCase().trim() === key);
+                    if (existing) {
+                        existing.quantity = (existing.quantity || 1) + 1;
+                    } else {
+                        list.unshift({ cardName: message.cardName.trim(), quantity: 1, acquired: 0, basis: 0 });
+                    }
+                    chrome.storage.local.set({ procurementTargets: list, currentDecklist: list }, () => {
+                        sendResponse({ status: "success", count: list.length });
+                    });
+                });
+                return true;
+            }
+            if (mode === "single" && message.cardName) {
             fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(message.cardName)}`)
                 .then(r => r.json())
                 .then(card => {

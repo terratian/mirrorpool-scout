@@ -19,6 +19,7 @@ function parsePrice(val) {
 
 document.addEventListener("DOMContentLoaded", () => {
     initTabNavigation();
+    initArmedToggle();
     initProcurementControls();
     initMetaTracker();
     initSettingsPanel();
@@ -591,4 +592,39 @@ function initSettingsPanel() {
             });
         }
     });
+}
+
+
+function initArmedToggle() {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar || document.getElementById("scout-armed-toggle")) return;
+
+    const btn = document.createElement("button");
+    btn.id = "scout-armed-toggle";
+    btn.style.cssText = "width:100%; margin-bottom:14px; padding:8px 10px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:space-between; border:1px solid #10b981; background:rgba(16,185,129,0.12); color:#10b981;";
+
+    function renderState(isArmed) {
+        btn.style.borderColor = isArmed ? "#10b981" : "#475569";
+        btn.style.background = isArmed ? "rgba(16,185,129,0.12)" : "#0b1120";
+        btn.style.color = isArmed ? "#10b981" : "#94a3b8";
+        btn.innerHTML = isArmed
+            ? `<span>🟢 SCOUT ARMED</span><span style="font-size:9px; opacity:0.85;">AUTO-DETECT ON</span>`
+            : `<span>⚪ DISARMED</span><span style="font-size:9px; opacity:0.85;">QUIET MODE</span>`;
+    }
+
+    chrome.storage.local.get({ scoutArmed: true }, (res) => {
+        renderState(Boolean(res.scoutArmed));
+    });
+
+    btn.addEventListener("click", () => {
+        chrome.storage.local.get({ scoutArmed: true }, (res) => {
+            const nextState = !res.scoutArmed;
+            chrome.storage.local.set({ scoutArmed: nextState }, () => {
+                renderState(nextState);
+            });
+        });
+    });
+
+    const firstSection = sidebar.querySelector(".nav-section") || sidebar.firstElementChild?.nextSibling;
+    sidebar.insertBefore(btn, firstSection);
 }

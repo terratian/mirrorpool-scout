@@ -118,9 +118,10 @@ function extractBestEbayCardName(rawTitle) {
             <div id="mp-deal-verdict-container">
                 <div style="font-size:11px; color:#64748b; padding:4px 0;">⏳ Querying Scryfall API benchmarks...</div>
             </div>
-            <div style="display:flex; gap:8px; margin-top:8px;">
-                <button id="mp-btn-save" style="flex:1; padding:7px; border-radius:4px; background:#21262d; border:1px solid #30363d; color:#c9d1d9; font-weight:700; font-size:11px; cursor:pointer;">+ Bookmark</button>
-                <button id="mp-btn-dash" style="flex:1; padding:7px; border-radius:4px; background:rgba(0,255,204,0.06); border:1px solid #00ffcc; color:#00ffcc; font-weight:700; font-size:11px; cursor:pointer;">⛶ Open Dashboard</button>
+            <div style="display:flex; gap:6px; margin-top:8px;">
+                <button id="mp-btn-save" style="flex:1; padding:7px 5px; border-radius:4px; background:#10b981; border:none; color:#030712; font-weight:800; font-size:11px; cursor:pointer;">📥 + Watchlist</button>
+                <button id="mp-btn-procure" style="flex:1; padding:7px 5px; border-radius:4px; background:#1e293b; border:1px solid #334155; color:#f8fafc; font-weight:700; font-size:11px; cursor:pointer;">🎯 + Procurement</button>
+                <button id="mp-btn-dash" style="flex:1; padding:7px 5px; border-radius:4px; background:rgba(0,255,204,0.06); border:1px solid #00ffcc; color:#00ffcc; font-weight:700; font-size:11px; cursor:pointer;">⛶ Dashboard</button>
             </div>
         `;
 
@@ -161,6 +162,20 @@ function extractBestEbayCardName(rawTitle) {
         });
 
         // 5. Button Listeners
+        const procureBtn = document.getElementById("mp-btn-procure");
+        if (procureBtn) {
+            procureBtn.addEventListener("click", () => {
+                chrome.runtime.sendMessage({
+                    action: "importDetectedToScout",
+                    mode: "procurement_single",
+                    cardName: matchedCardName
+                }, () => {
+                    procureBtn.innerText = "✓ In Procurement";
+                    procureBtn.style.borderColor = "#10b981";
+                    procureBtn.style.color = "#10b981";
+                });
+            });
+        }
         document.getElementById("mp-btn-dash").addEventListener("click", () => {
             chrome.runtime.sendMessage({ action: "openDashboard" });
         });
