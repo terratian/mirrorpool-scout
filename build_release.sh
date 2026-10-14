@@ -13,7 +13,7 @@ rm -rf dist mirrorpool-scout-release.zip
 mkdir -p dist
 
 # 3. Copy only production files required by manifest.json
-cp manifest.json background.js content.js dashboard.html dashboard.js dist/
+cp manifest.json background.js content.js auto-detector.js dashboard.html dashboard.js dist/
 [ -f "popup.html" ] && cp popup.html dist/
 [ -f "popup.js" ] && cp popup.js dist/
 [ -f "metrics-schema.js" ] && cp metrics-schema.js dist/

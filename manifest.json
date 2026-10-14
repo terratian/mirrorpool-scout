@@ -48,6 +48,20 @@
         "content.css"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://*.mtgdecks.net/*",
+        "*://*.mtggoldfish.com/*",
+        "*://*.tcgplayer.com/*",
+        "*://*.magic.gg/*",
+        "*://*.wizards.com/*",
+        "*://*.cardmarket.com/*"
+      ],
+      "js": [
+        "auto-detector.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "short_name": "Scout",

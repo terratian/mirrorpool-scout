@@ -176,3 +176,166 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.action.onClicked.addListener(() => {
     chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
 });
+
+
+// --- Mirror Pool Scout: Local Scryfall Card-Name Catalog & Auto-Detector ---
+let scryfallNameSet = null;
+let catalogLoadingPromise = null;
+
+async function getScryfallCatalogSet() {
+    if (scryfallNameSet && scryfallNameSet.size > 1000) return scryfallNameSet;
+    if (catalogLoadingPromise) return catalogLoadingPromise;
+
+    catalogLoadingPromise = new Promise((resolve) => {
+        chrome.storage.local.get(["scryfallCatalogNames", "scryfallCatalogUpdatedAt"], async (res) => {
+            const now = Date.now();
+            const ageHours = res.scryfallCatalogUpdatedAt ? (now - res.scryfallCatalogUpdatedAt) / 3600000 : 999;
+
+            if (Array.isArray(res.scryfallCatalogNames) && res.scryfallCatalogNames.length > 5000 && ageHours < 168) {
+                scryfallNameSet = new Set(res.scryfallCatalogNames);
+                resolve(scryfallNameSet);
+                return;
+            }
+
+            try {
+                const resp = await fetch("https://api.scryfall.com/catalog/card-names");
+                const data = await resp.json();
+                if (Array.isArray(data.data)) {
+                    const lowerNames = [];
+                    data.data.forEach(name => {
+                        lowerNames.push(name.toLowerCase());
+                        // Also index front face of double-faced / split cards (e.g. "Fable of the Mirror-Breaker // Reflection of Kiki-Jiki")
+                        if (name.includes(" // ")) {
+                            lowerNames.push(name.split(" // ")[0].trim().toLowerCase());
+                        }
+                    });
+                    scryfallNameSet = new Set(lowerNames);
+                    chrome.storage.local.set({
+                        scryfallCatalogNames: lowerNames,
+                        scryfallCatalogUpdatedAt: now
+                    });
+                    console.log(`[MPScout] Cached ${scryfallNameSet.size} Scryfall card names locally.`);
+                    resolve(scryfallNameSet);
+                    return;
+                }
+            } catch (err) {
+                console.warn("[MPScout] Catalog fetch error:", err);
+            }
+            scryfallNameSet = new Set();
+            resolve(scryfallNameSet);
+        });
+    });
+    return catalogLoadingPromise;
+}
+
+// Pre-warm catalog on service worker startup
+getScryfallCatalogSet();
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "verifyDetectedCandidates") {
+        chrome.storage.local.get({ scoutArmed: true }, async (cfg) => {
+            if (!cfg.scoutArmed) {
+                if (sender.tab?.id) chrome.action.setBadgeText({ tabId: sender.tab.id, text: "" });
+                sendResponse({ armed: false });
+                return;
+            }
+
+            const nameSet = await getScryfallCatalogSet();
+            const rawDeckLines = Array.isArray(message.deckCandidates) ? message.deckCandidates : [];
+            const rawTitleCandidates = Array.isArray(message.titleCandidates) ? message.titleCandidates : [];
+
+            // 1. Verify Decklist Candidates against exact Scryfall Catalog Set
+            const verifiedMap = new Map();
+            for (const item of rawDeckLines) {
+                const rawName = String(item.cardName || "").trim();
+                const cleanKey = rawName.toLowerCase().split(" // ")[0].trim();
+                if (cleanKey.length >= 2 && nameSet.has(cleanKey)) {
+                    const prev = verifiedMap.get(cleanKey);
+                    if (prev) {
+                        prev.quantity += (item.quantity || 1);
+                    } else {
+                        verifiedMap.set(cleanKey, {
+                            cardName: rawName,
+                            quantity: item.quantity || 1,
+                            acquired: 0,
+                            basis: 0
+                        });
+                    }
+                }
+            }
+
+            const verifiedDeck = Array.from(verifiedMap.values());
+            const totalCards = verifiedDeck.reduce((sum, c) => sum + c.quantity, 0);
+
+            // 2. Verify Single-Card Title Candidates if not a full deck page
+            let verifiedSingleCard = null;
+            for (const candidate of rawTitleCandidates) {
+                const clean = String(candidate || "").trim();
+                const key = clean.toLowerCase().split(" // ")[0].trim();
+                if (key.length >= 3 && nameSet.has(key)) {
+                    verifiedSingleCard = clean;
+                    break;
+                }
+            }
+
+            if (sender.tab?.id) {
+                const badgeText = verifiedDeck.length >= 3
+                    ? String(totalCards)
+                    : (verifiedSingleCard ? "1" : "");
+                chrome.action.setBadgeBackgroundColor({ tabId: sender.tab.id, color: "#10b981" });
+                chrome.action.setBadgeText({ tabId: sender.tab.id, text: badgeText });
+            }
+
+            sendResponse({
+                armed: true,
+                decklist: verifiedDeck,
+                totalCards,
+                singleCard: verifiedSingleCard
+            });
+        });
+        return true;
+    }
+
+    if (message.action === "importDetectedToScout") {
+        const mode = message.mode;
+        if (mode === "deck" && Array.isArray(message.decklist) && message.decklist.length > 0) {
+            chrome.storage.local.set({
+                procurementTargets: message.decklist,
+                currentDecklist: message.decklist,
+                deckMeta: {
+                    deckName: message.deckName || "Auto-Detected Deck",
+                    printingTarget: "normal",
+                    conditionFloor: "any"
+                }
+            }, () => {
+                sendResponse({ status: "success", count: message.decklist.length });
+            });
+            return true;
+        }
+        if (mode === "single" && message.cardName) {
+            fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(message.cardName)}`)
+                .then(r => r.json())
+                .then(card => {
+                    const floor = parseFloat(card.prices?.usd || card.prices?.usd_foil || 0);
+                    const record = {
+                        title: card.name || message.cardName,
+                        cardName: card.name || message.cardName,
+                        price: floor.toFixed(2),
+                        marketFloor: floor.toFixed(2),
+                        timeLeft: "Spot Price",
+                        activity: `MTGO: ${card.prices?.tix || "0.00"} TIX`,
+                        url: message.url || card.scryfall_uri,
+                        savedAt: Date.now()
+                    };
+                    chrome.storage.local.get({ watchlist: [] }, (res) => {
+                        const updated = [record, ...res.watchlist.filter(x => (x.cardName || x.title) !== record.cardName)];
+                        chrome.storage.local.set({ watchlist: updated }, () => {
+                            sendResponse({ status: "success", card: record });
+                        });
+                    });
+                })
+                .catch(err => sendResponse({ status: "error", error: err.message }));
+            return true;
+        }
+    }
+});
