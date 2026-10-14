@@ -175,8 +175,12 @@ function renderSavedListsToolbar(savedLists, activeDeckName) {
         toolbar = document.createElement("div");
         toolbar.id = "chase-hunt-saved-toolbar";
         toolbar.style.cssText = "display:flex; justify-content:space-between; align-items:center; gap:10px; background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:10px 14px; margin-bottom:12px; flex-wrap:wrap;";
-        const procContainer = document.getElementById("procurement-container") || procTab.lastElementChild;
-        procTab.insertBefore(toolbar, procContainer);
+        const procContainer = document.getElementById("procurement-container") || procTab.firstElementChild;
+        if (procContainer && procContainer.parentNode === procTab) {
+            procTab.insertBefore(toolbar, procContainer);
+        } else {
+            procTab.appendChild(toolbar);
+        }
     }
 
     const listNames = Object.keys(savedLists);
