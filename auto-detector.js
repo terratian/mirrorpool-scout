@@ -231,7 +231,7 @@
                         ${data.isDeck ? `⚡ Import ${data.decklist.length} Cards` : "📥 + Watchlist"}
                     </button>
                     <button id="mp-act-secondary" style="flex:0.9; padding:8px 10px; border-radius:5px; background:#1e293b; border:1px solid #334155; color:#f8fafc; font-weight:700; font-size:11px; cursor:pointer;">
-                        ${data.isDeck ? "📋 Copy MTGA" : "🎯 + Procurement"}
+                        ${data.isDeck ? "📋 Copy MTGA" : "🎯 + Chase Hunt"}
                     </button>
                     <a id="mp-snipe-bin" href="${ebaySniperUrl}" target="_blank" style="flex:1.2; padding:8px 10px; border-radius:5px; background:#1e293b; border:1px solid #f59e0b; color:#f59e0b; font-weight:700; font-size:11px; text-decoration:none; text-align:center;">
                         🎯 Snipe <85% Floor BIN ↗
@@ -385,7 +385,7 @@
                         mode: "procurement_single",
                         cardName: data.title
                     }, () => {
-                        secBtn.innerText = "✓ In Procurement!";
+                        secBtn.innerText = "✓ In Chase Hunt!";
                         secBtn.style.borderColor = "#10b981";
                         secBtn.style.color = "#10b981";
                     });
