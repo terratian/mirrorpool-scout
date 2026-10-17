@@ -1236,3 +1236,281 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 })();
 // === MP_CHASE_PORTFOLIO_END ===
 
+// === MP_ECOSYSTEM_UI_START ===
+(function() {
+    const scryfallMetaCache = {};
+
+    function sanitizeCardTitle(raw) {
+        if (!raw) return "";
+        return raw
+            .replace(/^\d+[xX]?\s+/, "")
+            .replace(/\s*\([A-Za-z0-9]{2,5}\)\s*\d*.*$/, "")
+            .replace(/\s*\[.*?\]/g, "")
+            .split("|")[0]
+            .trim();
+    }
+
+    function extractSetCode(raw) {
+        if (!raw) return "MTG";
+        const m = raw.match(/\(([A-Za-z0-9]{3,5})\)/);
+        return m ? m[1].toUpperCase() : "STD";
+    }
+
+    function formatManaPips(manaCost) {
+        if (!manaCost) return "";
+        const symbols = manaCost.match(/\{([^}]+)\}/g) || [];
+        return symbols.slice(0, 5).map(sym => {
+            const code = sym.replace(/[{}]/g, "").toUpperCase();
+            const colorClass = ["W","U","B","R","G"].includes(code) ? `mp-pip-${code}` : "mp-pip-C";
+            return `<span class="mp-mana-pip ${colorClass}">${code}</span>`;
+        }).join("");
+    }
+
+    // 1. Inject Top Ecosystem Ribbon (Scryfall Quick Search + Goldfish Price Mode Switcher)
+    function ensureEcosystemRibbon() {
+        if (document.getElementById("mp-ecosystem-ribbon")) return;
+        const mainArea = document.querySelector(".main-content, main, body > div:nth-of-type(2)");
+        if (!mainArea) return;
+
+        const ribbon = document.createElement("div");
+        ribbon.id = "mp-ecosystem-ribbon";
+        ribbon.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div class="mp-omni-search-wrap">
+                    <span style="color:#10b981; font-size:12px;">🔍</span>
+                    <input type="text" id="mp-scryfall-omni" placeholder="Scryfall Instant Lookup (Press Enter to add to Chase)..." />
+                </div>
+                <span id="mp-omni-status" style="font-size:11px; color:#94a3b8;"></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div class="mp-mode-pills" id="mp-deck-view-switcher" title="Switch Decklist Display Mode">
+                    <button type="button" class="mp-mode-pill active" data-view="raw">📝 Text List</button>
+                    <button type="button" class="mp-mode-pill" data-view="visual">🖼️ Visual Grid</button>
+                </div>
+                <div class="mp-mode-pills" id="mp-currency-switcher" title="MTGGoldfish Style Ecosystem Filter">
+                    <button type="button" class="mp-mode-pill active" data-curr="all">Paper + MTGO</button>
+                    <button type="button" class="mp-mode-pill" data-curr="snipe">⚡ Snipe Deals (<85%)</button>
+                </div>
+            </div>
+        `;
+        mainArea.prepend(ribbon);
+
+        // Wire Scryfall Omni-Search to append directly to active Decklist Textarea
+        const omniInput = document.getElementById("mp-scryfall-omni");
+        const omniStatus = document.getElementById("mp-omni-status");
+        omniInput.addEventListener("keydown", async (e) => {
+            if (e.key === "Enter" && omniInput.value.trim()) {
+                const query = omniInput.value.trim();
+                omniStatus.innerText = "Querying Scryfall...";
+                try {
+                    const res = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(query)}`);
+                    if (res.ok) {
+                        const card = await res.json();
+                        const setTag = (card.set || "MTG").toUpperCase();
+                        const colNum = card.collector_number || "";
+                        const price = (card.prices && card.prices.usd) ? `$${card.prices.usd}` : "N/A";
+                        const ta = document.querySelector("textarea");
+                        if (ta) {
+                            const prefix = ta.value.trim() ? ta.value.trim() + "\n" : "";
+                            ta.value = `${prefix}1 ${card.name} (${setTag}) ${colNum}`.trim();
+                        }
+                        omniStatus.innerHTML = `<span style="color:#10b981;">✔ Added ${card.name} (${price})</span>`;
+                        omniInput.value = "";
+                        renderVisualDeckGrid();
+                    } else {
+                        omniStatus.innerHTML = `<span style="color:#f59e0b;">Card not found on Scryfall</span>`;
+                    }
+                } catch (err) {
+                    omniStatus.innerText = "Lookup error";
+                }
+            }
+        });
+
+        // Wire Visual Grid vs. Raw Textarea Switcher
+        ribbon.querySelectorAll("#mp-deck-view-switcher .mp-mode-pill").forEach(btn => {
+            btn.addEventListener("click", () => {
+                ribbon.querySelectorAll("#mp-deck-view-switcher .mp-mode-pill").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                const mode = btn.getAttribute("data-view");
+                const ta = document.querySelector("textarea");
+                const grid = ensureVisualDeckGrid();
+                if (ta && grid) {
+                    if (mode === "visual") {
+                        ta.style.display = "none";
+                        grid.style.display = "grid";
+                        renderVisualDeckGrid();
+                    } else {
+                        ta.style.display = "block";
+                        grid.style.display = "none";
+                    }
+                }
+            });
+        });
+    }
+
+    // 2. Build Scryfall/Moxfield Visual Deck Grid right below the Textarea (Non-Destructive)
+    function ensureVisualDeckGrid() {
+        let grid = document.getElementById("mp-visual-deck-grid");
+        if (!grid) {
+            const ta = document.querySelector("textarea");
+            if (!ta) return null;
+            grid = document.createElement("div");
+            grid.id = "mp-visual-deck-grid";
+            ta.insertAdjacentElement("afterend", grid);
+        }
+        return grid;
+    }
+
+    function renderVisualDeckGrid() {
+        const grid = ensureVisualDeckGrid();
+        const ta = document.querySelector("textarea");
+        if (!grid || !ta) return;
+
+        const lines = ta.value.split("\n").map(l => l.trim()).filter(Boolean);
+        if (lines.length === 0) {
+            grid.innerHTML = `<div style="grid-column:1/-1; color:#64748b; text-align:center; padding:20px;">Paste or scrape a decklist to view visual card mockups.</div>`;
+            return;
+        }
+
+        grid.innerHTML = lines.map(line => {
+            const qtyMatch = line.match(/^(\d+)[xX]?\s+/);
+            const qty = qtyMatch ? qtyMatch[1] : "1";
+            const clean = sanitizeCardTitle(line);
+            const setCode = extractSetCode(line);
+            const imgUrl = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(clean)}&format=image&version=normal`;
+            const eBayUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent("MTG " + clean)}&LH_Auction=1&_sop=1`;
+            return `
+                <div class="mp-visual-card-tile" data-card-name="${clean}" onclick="window.open('${eBayUrl}', '_blank')" title="Click to search live eBay Auctions for ${clean}">
+                    <span class="mp-tile-qty-badge">${qty}x</span>
+                    <img src="${imgUrl}" alt="${clean}" loading="lazy" onerror="this.style.opacity='0.25'" />
+                    <div class="mp-tile-price-ribbon">
+                        <span style="font-weight:700; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:95px;">${clean}</span>
+                        <span class="mp-set-badge">${setCode}</span>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    // 3. Hydrate Active Procurement Targets Table Rows with Scryfall Art Crop, Set Badge & Mana Pips
+    async function hydrateTableRowsWithScryfall() {
+        const rows = document.querySelectorAll("table tbody tr, tr");
+        for (const tr of rows) {
+            const firstTd = tr.querySelector("td:first-child");
+            if (!firstTd || firstTd.querySelector(".mp-card-cell-wrap")) continue;
+
+            const rawName = firstTd.innerText.trim();
+            const cleanName = sanitizeCardTitle(rawName);
+            if (!cleanName || cleanName.length < 2) continue;
+
+            // Wrap existing text cleanly without breaking textContent readers
+            const artUrl = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cleanName)}&format=image&version=art_crop`;
+            firstTd.innerHTML = `
+                <div class="mp-card-cell-wrap">
+                    <img class="mp-art-thumb" src="${artUrl}" alt="" loading="lazy" onerror="this.style.display='none'" />
+                    <div>
+                        <div style="color:#10b981; font-weight:600; font-size:13px;">${cleanName}</div>
+                        <div class="mp-card-meta-sub" data-meta-for="${cleanName}">
+                            <span class="mp-set-badge">MTG</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Fetch lightweight Scryfall JSON once per session for set code & mana cost pips
+            if (!scryfallMetaCache[cleanName]) {
+                try {
+                    const cached = sessionStorage.getItem("mp_sf_" + cleanName);
+                    if (cached) {
+                        scryfallMetaCache[cleanName] = JSON.parse(cached);
+                    } else {
+                        const r = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cleanName)}`);
+                        if (r.ok) {
+                            const d = await r.json();
+                            scryfallMetaCache[cleanName] = {
+                                set: (d.set || "MTG").toUpperCase(),
+                                mana: d.mana_cost || "",
+                                usd: d.prices?.usd || null
+                            };
+                            sessionStorage.setItem("mp_sf_" + cleanName, JSON.stringify(scryfallMetaCache[cleanName]));
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            const meta = scryfallMetaCache[cleanName];
+            const metaContainer = firstTd.querySelector(".mp-card-meta-sub");
+            if (meta && metaContainer) {
+                metaContainer.innerHTML = `
+                    <span class="mp-set-badge">${meta.set}</span>
+                    ${formatManaPips(meta.mana)}
+                `;
+            }
+        }
+    }
+
+    // 4. Upgrade Left Sidebar Saved Deck Cards with Completion Progress & Quick Snipe Links
+    function upgradeSidebarDeckCards() {
+        const items = document.querySelectorAll("#mp-saved-decks-list .mp-deck-summary-item");
+        if (!items.length) return;
+
+        // Calculate active completion ratio from table
+        const rows = document.querySelectorAll("table tbody tr, tr");
+        let totalReq = 0, totalAcq = 0;
+        rows.forEach(tr => {
+            const cells = tr.querySelectorAll("td");
+            if (cells.length >= 2) {
+                const parts = cells[1].innerText.split("/").map(s => parseInt(s.trim(), 10));
+                if (!isNaN(parts[0]) && !isNaN(parts[1])) {
+                    totalAcq += parts[0];
+                    totalReq += parts[1];
+                }
+            }
+        });
+        const pct = totalReq > 0 ? Math.min(100, Math.round((totalAcq / totalReq) * 100)) : 0;
+
+        items.forEach((card, idx) => {
+            if (card.querySelector(".mp-deck-progress-track")) return;
+            const deckTitle = card.querySelector(".mp-deck-name")?.innerText.replace(/^[🟢📑]\s*/, "").trim() || "MTG Deck";
+            const ratioPct = idx === 0 ? pct : 0;
+
+            const prog = document.createElement("div");
+            prog.innerHTML = `
+                <div class="mp-deck-progress-track" title="${totalAcq} / ${totalReq} Cards Acquired (${ratioPct}%)">
+                    <div class="mp-deck-progress-fill" style="width:${ratioPct}%;"></div>
+                </div>
+                <div class="mp-deck-quick-snipe">
+                    <a class="mp-mini-pill" href="https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent("MTG " + deckTitle + " lot")}&LH_Auction=1&_sop=1" target="_blank" title="Snipe live eBay auctions">🎯 eBay Snipe</a>
+                    <a class="mp-mini-pill" href="https://www.whatnot.com/search?query=${encodeURIComponent("MTG " + deckTitle)}&type=livestreams" target="_blank" title="Hunt live Whatnot streams">⚡ Whatnot</a>
+                    <a class="mp-mini-pill" href="https://www.tcgplayer.com/massentry" target="_blank" title="Open TCGplayer Mass Entry">🛒 TCG Mass</a>
+                </div>
+            `;
+            card.appendChild(prog);
+        });
+    }
+
+    function bootEcosystemUI() {
+        ensureEcosystemRibbon();
+        hydrateTableRowsWithScryfall();
+        upgradeSidebarDeckCards();
+
+        let timer = null;
+        const obs = new MutationObserver(() => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                ensureEcosystemRibbon();
+                hydrateTableRowsWithScryfall();
+                upgradeSidebarDeckCards();
+            }, 180);
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", bootEcosystemUI);
+    } else {
+        bootEcosystemUI();
+    }
+})();
+// === MP_ECOSYSTEM_UI_END ===
+
