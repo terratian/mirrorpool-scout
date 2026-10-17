@@ -1,4 +1,4 @@
-// --- Mirror Pool Scout: Full 5-Tab Controller (Chase Hunt, Saved Lists, Price Sorting & Synergy Trend Radar) ---
+// --- Mirror Pool Scout: Full 5-Tab Controller (Buy List, Saved Lists, Price Sorting & Synergy Trend Radar) ---
 
 const TIX_TO_USD = 0.92;
 let currentSortMode = "price-desc"; // Default sort: Highest price chase targets at the top!
@@ -112,7 +112,7 @@ function initTabNavigation() {
 
     navItems.forEach((item) => {
         if (item.innerText.includes("Procurement")) {
-            item.innerHTML = item.innerHTML.replace(/Procurement Hunter/g, "Chase Hunt");
+            item.innerHTML = item.innerHTML.replace(/Procurement Hunter/g, "Buy List");
         }
         item.addEventListener("click", (e) => {
             e.preventDefault();
@@ -125,7 +125,7 @@ function initTabNavigation() {
             let targetId = explicitTarget;
             if (!targetId || !document.getElementById(targetId)) {
                 if (text.includes("watch")) targetId = "tab-watchlist";
-                else if (text.includes("chase") || text.includes("procure") || text.includes("hunt")) targetId = "tab-procurement";
+                else if (text.includes("buy list") || text.includes("chase") || text.includes("procure") || text.includes("hunt")) targetId = "tab-procurement";
                 else if (text.includes("arbitrage")) targetId = "tab-arbitrage";
                 else if (text.includes("meta") || text.includes("insight")) targetId = "tab-meta";
                 else if (text.includes("setting") || text.includes("pref")) targetId = "tab-settings";
@@ -172,15 +172,15 @@ function syncAllPanels() {
     );
 }
 
-// 3. Inject Saved Chase Lists Manager & Sort Control Bar in #tab-procurement (Chase Hunt)
+// 3. Inject Saved Chase Lists Manager & Sort Control Bar in #tab-procurement (Buy List)
 function renderSavedListsToolbar(savedLists, activeDeckName) {
     const procTab = document.getElementById("tab-procurement");
     if (!procTab) return;
 
-    // Rename heading inside #tab-procurement to Chase Hunt
+    // Rename heading inside #tab-procurement to Buy List
     procTab.querySelectorAll("h1, h2, h3").forEach(h => {
         if (h.innerText.includes("Procurement")) {
-            h.innerText = h.innerText.replace(/Procurement Hunter/g, "Chase Hunt").replace(/Procurement/g, "Chase Hunt");
+            h.innerText = h.innerText.replace(/Procurement Hunter/g, "Buy List").replace(/Procurement/g, "Buy List");
         }
     });
 
@@ -198,7 +198,7 @@ function renderSavedListsToolbar(savedLists, activeDeckName) {
     }
 
     const listNames = Object.keys(savedLists);
-    const optionsHtml = `<option value="">📂 Saved Chase Hunt Lists (${listNames.length})...</option>` +
+    const optionsHtml = `<option value="">📂 Saved Lists (${listNames.length})...</option>` +
         listNames.map(name => `<option value="${escapeHtml(name)}" ${name === activeDeckName ? "selected" : ""}>${escapeHtml(name)} (${savedLists[name].cards?.length || 0} unique)</option>`).join("");
 
     toolbar.innerHTML = `
@@ -208,10 +208,10 @@ function renderSavedListsToolbar(savedLists, activeDeckName) {
             </select>
             <button id="btn-new-chase-list" style="background:#1e293b; color:#38bdf8; border:1px solid #334155; border-radius:6px; padding:7px 10px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;">+ New List</button>
             <button id="btn-delete-chase-list" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid #ef4444; border-radius:6px; padding:7px 10px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;">🗑 Delete</button>
-            <a href="https://mtgscavenger.com/" target="_blank" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid #f59e0b; border-radius:6px; padding:7px 10px; font-size:11px; font-weight:800; text-decoration:none; white-space:nowrap;" title="Open MTGScavenger with Mirror Pool Scout Adapter">🦴 Hunt MTGScavenger ↗</a>
+            <a href="https://mtgscavenger.com/" target="_blank" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid #f59e0b; border-radius:6px; padding:7px 10px; font-size:11px; font-weight:800; text-decoration:none; white-space:nowrap;" title="Open MTGScavenger with Mirror Pool Scout Adapter">🦴 Open MTGScavenger ↗</a>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
-            <span style="font-size:11px; color:#94a3b8; font-weight:600;">Sort Chase Hunt:</span>
+            <span style="font-size:11px; color:#94a3b8; font-weight:600;">Sort:</span>
             <select id="chase-sort-select" style="background:#070d17; color:#10b981; border:1px solid #10b981; border-radius:6px; padding:7px 10px; font-size:12px; font-weight:700; cursor:pointer;">
                 <option value="price-desc" ${currentSortMode === "price-desc" ? "selected" : ""}>💰 Paper Price: High ➔ Low</option>
                 <option value="price-asc" ${currentSortMode === "price-asc" ? "selected" : ""}>💵 Paper Price: Low ➔ High</option>
@@ -316,8 +316,8 @@ function renderWatchlistPanel(items) {
                     <span style="font-size:11px; color:#f59e0b; background:#1e293b; padding:2px 6px; border-radius:4px; white-space:nowrap;">⏱ ${escapeHtml(timeText)}</span>
                 </div>
                 <div style="background:#070d17; border:1px solid #1e293b; border-radius:6px; padding:10px; font-size:12px; display:flex; flex-direction:column; gap:4px;">
-                    <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Scryfall Floor:</span><strong style="color:#f59e0b;">${marketFloor > 0 ? "$" + marketFloor.toFixed(2) : "$--"}</strong></div>
-                    <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Listed / Spot Cost:</span><strong style="color:#00ffcc;">$${currentCost.toFixed(2)}</strong></div>
+                    <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Market Price:</span><strong style="color:#f59e0b;">${marketFloor > 0 ? "$" + marketFloor.toFixed(2) : "$--"}</strong></div>
+                    <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Listing Price:</span><strong style="color:#00ffcc;">$${currentCost.toFixed(2)}</strong></div>
                     <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Activity:</span><span style="color:#10b981;">${escapeHtml(activityText)}</span></div>
                 </div>
                 <div style="display:flex; gap:6px;">
@@ -345,7 +345,7 @@ function renderWatchlistPanel(items) {
     });
 }
 
-// 5. Wire Chase Hunt Controls (Save to Named Lists + Scrape + Clean Export)
+// 5. Wire Buy List Controls (Save to Named Lists + Scrape + Clean Export)
 function initChaseHuntControls() {
     const saveDeckBtn = document.getElementById("save-deck-btn");
     const scrapeDeckBtn = document.getElementById("scrape-deck-btn");
@@ -355,7 +355,7 @@ function initChaseHuntControls() {
     const printingSelect = document.getElementById("printing-target-select");
     const conditionSelect = document.getElementById("condition-floor-select");
 
-    if (saveDeckBtn) saveDeckBtn.innerText = "⚡ Save & Compile Chase Hunt Sheet";
+    if (saveDeckBtn) saveDeckBtn.innerText = "⚡ Save List & Get Prices";
 
     if (saveDeckBtn && decklistInput) {
         saveDeckBtn.addEventListener("click", () => {
@@ -364,32 +364,17 @@ function initChaseHuntControls() {
                 alert("Paste a decklist or card list into the box first (e.g. 4 Thoughtseize).");
                 return;
             }
-            const parsedMap = new Map();
-            raw.split("\n").forEach(line => {
-                const cleaned = line.trim();
-                if (!cleaned || /^(Deck|Sideboard|Commander|Companion|\/\/)/i.test(cleaned)) return;
-                const match = cleaned.match(/^(\d+)[xX]?\s+(.+?)(?:\s+\([A-Z0-9]{2,5}\)\s*\d*.*)?$/);
-                if (match) {
-                    const qty = parseInt(match[1], 10) || 1;
-                    const name = match[2].trim();
-                    const key = name.toLowerCase();
-                    if (parsedMap.has(key)) {
-                        parsedMap.get(key).quantity += qty;
-                    } else {
-                        parsedMap.set(key, { cardName: name, quantity: qty, acquired: 0, basis: 0 });
-                    }
-                }
-            });
-
-            const list = Array.from(parsedMap.values());
+            const parsed = MPLists.parse(raw);
+            const list = parsed.cards;
             if (list.length === 0) {
-                alert("Could not parse any valid card lines. Format: '4 Thoughtseize'");
+                alert("Could not read any cards. Paste a list like '4 Lightning Bolt', or import a CSV/.txt/.dek file from MTGGoldfish, ManaBox, TCGplayer, Moxfield, Arena or MTGO.");
                 return;
             }
+            if (parsed.deckName && deckNameInput && !deckNameInput.value.trim()) deckNameInput.value = parsed.deckName;
 
             const deckName = (deckNameInput && deckNameInput.value.trim())
                 ? deckNameInput.value.trim()
-                : `Chase List (${list.length} Cards)`;
+                : `My List (${list.length} cards)`;
             if (deckNameInput) deckNameInput.value = deckName;
 
             const deckMeta = {
@@ -409,8 +394,8 @@ function initChaseHuntControls() {
                     savedChaseLists: savedLists
                 }, () => {
                     syncAllPanels();
-                    setTimeout(() => { saveDeckBtn.innerText = "✅ Saved to Chase Hunt Library!"; }, 400);
-                    setTimeout(() => { saveDeckBtn.innerText = "⚡ Save & Compile Chase Hunt Sheet"; }, 2200);
+                    setTimeout(() => { saveDeckBtn.innerText = "✅ Saved to My Decks!"; }, 400);
+                    setTimeout(() => { saveDeckBtn.innerText = "⚡ Save List & Get Prices"; }, 2200);
                 });
             });
         });
@@ -468,17 +453,19 @@ function initChaseHuntControls() {
             chrome.storage.local.get(["procurementTargets", "currentDecklist"], (res) => {
                 const list = res.procurementTargets || res.currentDecklist || [];
                 if (list.length === 0) {
-                    alert("No Chase Hunt sheet loaded to export.");
+                    alert("No Buy List loaded to export.");
                     return;
                 }
-                const manifestText = list
-                    .map(c => `${Math.max(0, (c.quantity || 1) - (c.acquired || 0))} ${c.cardName}`)
-                    .filter(line => !line.startsWith("0 "))
-                    .join("\n");
+                const fmtSel = document.getElementById("mp-export-format");
+                const onlyNeeded = !document.getElementById("mp-export-needed") || document.getElementById("mp-export-needed").checked;
+                const rows = list.map(c => ({ cardName: c.cardName, set: c.set, cn: c.cn, foil: c.foil,
+                    qty: onlyNeeded ? Math.max(0, (c.quantity || 1) - (c.acquired || 0)) : (c.quantity || 1) }));
+                const manifestText = MPLists.format(rows, fmtSel ? fmtSel.value : "plain");
+                if (!manifestText.trim() || rows.every(r => r.qty <= 0)) { alert("Nothing left to buy on this list."); return; }
 
                 navigator.clipboard.writeText(manifestText).then(() => {
                     const orig = exportManifestBtn.innerText;
-                    exportManifestBtn.innerText = "✅ Clean Manifest Copied!";
+                    exportManifestBtn.innerText = "✅ Copied!";
                     setTimeout(() => { exportManifestBtn.innerText = orig; }, 2000);
                 });
             });
@@ -487,9 +474,48 @@ function initChaseHuntControls() {
 
     if (printingSelect) printingSelect.addEventListener("change", syncAllPanels);
     if (conditionSelect) conditionSelect.addEventListener("change", syncAllPanels);
+
+    // Live "what did Scout understand" line + file import (ManaBox / Goldfish / TCGplayer / MTGO files).
+    if (decklistInput) {
+        let status = document.getElementById("mp-import-status");
+        if (!status) {
+            status = document.createElement("div");
+            status.id = "mp-import-status";
+            status.style.cssText = "font-size:11px; color:#94a3b8; margin:6px 0; min-height:15px;";
+            (document.getElementById("mp-import-status-slot") || decklistInput).insertAdjacentElement(document.getElementById("mp-import-status-slot") ? "beforeend" : "afterend", status);
+        }
+        const detect = () => {
+            const v = decklistInput.value.trim();
+            if (!v) { status.textContent = "Paste a list or import a file. Works with MTGGoldfish, MTGDecks, ManaBox, TCGplayer, Moxfield, Archidekt, Deckbox, Arena and MTGO."; return; }
+            const r = MPLists.parse(v);
+            status.textContent = r.cards.length
+                ? `Detected: ${r.format} · ${r.total} cards (${r.cards.length} unique)` + (r.skipped.length ? ` · ${r.skipped.length} line(s) skipped` : "")
+                : "No cards recognised yet.";
+            status.style.color = r.cards.length ? "#10b981" : "#f59e0b";
+        };
+        decklistInput.addEventListener("input", detect);
+        decklistInput.addEventListener("change", detect);
+        detect();
+        const file = document.getElementById("mp-import-file");
+        const btn = document.getElementById("mp-import-file-btn");
+        if (file && btn) {
+            btn.addEventListener("click", () => file.click());
+            file.addEventListener("change", () => {
+                const f = file.files && file.files[0]; if (!f) return;
+                const rd = new FileReader();
+                rd.onload = () => {
+                    decklistInput.value = String(rd.result || "");
+                    if (deckNameInput && !deckNameInput.value.trim()) deckNameInput.value = f.name.replace(/\.[^.]+$/, "");
+                    detect();
+                    file.value = "";
+                };
+                rd.readAsText(f);
+            });
+        }
+    }
 }
 
-// 6. Fetch Live Scryfall Prices, Sort Chase Hunt Table, Show Prices on Buttons & Run Synergy Trend Algorithm
+// 6. Fetch Live Scryfall Prices, Sort Buy List Table, Show Prices on Buttons & Run Synergy Trend Algorithm
 function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baselineMap) {
     const tbody = document.getElementById("procurement-tbody");
     const arbPaperEl = document.getElementById("arb-paper-total");
@@ -506,8 +532,8 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
     ].filter(Boolean);
 
     if (targets.length === 0 && watchlistItems.length === 0) {
-        if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:16px; color:#94a3b8;">Paste a decklist above and click ⚡ Save & Compile Chase Hunt Sheet.</td></tr>`;
-        if (arbGrid) arbGrid.innerHTML = `<div style="color:#94a3b8; font-size:12px; padding:16px;">Load a decklist in Chase Hunt to compute live Paper vs. MTGO TIX arbitrage spreads.</div>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:16px; color:#94a3b8;">Paste a decklist above and click ⚡ Save List & Get Prices.</td></tr>`;
+        if (arbGrid) arbGrid.innerHTML = `<div style="color:#94a3b8; font-size:12px; padding:16px;">Load a decklist in Buy List to compute live Paper vs. MTGO TIX arbitrage spreads.</div>`;
         renderSynergyAndTrendRadar([], [], {});
         return;
     }
@@ -583,9 +609,9 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
 
                 // Actionable Snipe Ceiling (85% of Scryfall Floor) shown directly on the BIN and Auc buttons!
                 const snipeCeiling = unitPaper > 0 ? Math.max(0.99, unitPaper * 0.85).toFixed(2) : "4.99";
-                const tcgLabel = unitPaper > 0 ? `TCG $${unitPaper.toFixed(2)}` : "TCG Search";
-                const binLabel = unitPaper > 0 ? `BIN <$${snipeCeiling}` : "eBay BIN";
-                const aucLabel = unitPaper > 0 ? `Auc <$${snipeCeiling}` : "eBay Auc";
+                const tcgLabel = unitPaper > 0 ? `TCGplayer $${unitPaper.toFixed(2)}` : "TCGplayer Search";
+                const binLabel = unitPaper > 0 ? `eBay BIN ≤$${snipeCeiling}` : "eBay BIN";
+                const aucLabel = unitPaper > 0 ? `eBay Auction ≤$${snipeCeiling}` : "eBay Auction";
 
                 const minBinFloor = unitPaper >= 8.0 ? Math.max(2.50, unitPaper * 0.40).toFixed(2) : "0.99";
                 const minAucFloor = unitPaper >= 15.0 ? Math.max(1.99, unitPaper * 0.18).toFixed(2) : "0.99";
@@ -615,10 +641,10 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
                             </div>
                         </td>
                         <td style="padding:10px;">
-                            <div style="display:flex; gap:6px; flex-wrap:nowrap;">
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
                                 <a href="${tcgUrl}" target="_blank" style="color:#f8fafc; background:#1e293b; border:1px solid #475569; padding:4px 7px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:700; white-space:nowrap;" title="View on TCGplayer">${tcgLabel}</a>
-                                <a href="${ebayBinUrl}" target="_blank" style="color:#10b981; background:rgba(16,185,129,0.1); border:1px solid #10b981; padding:4px 7px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:700; white-space:nowrap;" title="Snipe eBay Buy It Now under 85% Scryfall Floor">${binLabel}</a>
-                                <a href="${ebayAuctionUrl}" target="_blank" style="color:#f59e0b; background:rgba(245,158,11,0.1); border:1px solid #f59e0b; padding:4px 7px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:700; white-space:nowrap;" title="Snipe eBay Ending Auctions under 85% Scryfall Floor">${aucLabel}</a>
+                                <a href="${ebayBinUrl}" target="_blank" style="color:#10b981; background:rgba(16,185,129,0.1); border:1px solid #10b981; padding:4px 7px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:700; white-space:nowrap;" title="eBay Buy It Now listings under 85% of market price">${binLabel}</a>
+                                <a href="${ebayAuctionUrl}" target="_blank" style="color:#f59e0b; background:rgba(245,158,11,0.1); border:1px solid #f59e0b; padding:4px 7px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:700; white-space:nowrap;" title="eBay auctions ending soon, under 85% of market price">${aucLabel}</a>
                             </div>
                         </td>
                     </tr>
@@ -705,7 +731,7 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
                 const actionUrl = safeHttpUrl(wMatch?.url) || `https://www.ebay.com/sch/i.html?_nkw=${encoded}&_sacat=19107&LH_BIN=1&_sop=15&_udlo=${minSnipe}&_udhi=${maxSnipe}`;
                 const actionLabel = wMatch?.url
                     ? `🎯 Open Bookmarked Deal ($${listedCost.toFixed(2)} vs $${paperFloor.toFixed(2)} Floor) ↗`
-                    : `🎯 Snipe eBay BIN <$${maxSnipe} (Floor $${paperFloor.toFixed(2)}) ↗`;
+                    : `🎯 eBay Buy It Now under $${maxSnipe} (Market $${paperFloor.toFixed(2)}) ↗`;
 
                 return `
                     <div style="background:#0b1120; border:1px solid ${borderColor}; border-radius:8px; padding:14px; display:flex; flex-direction:column; justify-content:space-between;">
@@ -726,12 +752,12 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
             }).join("");
         }
 
-        // Run Algorithmic Synergy & Metagame Trend Radar across user's Chase Hunt + Watchlist
+        // Run Algorithmic Synergy & Metagame Trend Radar across user's Buy List + Watchlist
         renderSynergyAndTrendRadar(enrichedTargets, watchlistItems, priceMap);
     });
 }
 
-// 7. Algorithmic Metagame Trend & Cross-Archetype Synergy Radar (Populates on Chase Hunt & Meta Analytics)
+// 7. Algorithmic Metagame Trend & Cross-Archetype Synergy Radar (Populates on Buy List & Meta Trends)
 function renderSynergyAndTrendRadar(enrichedTargets, watchlistItems, priceMap) {
     const procTab = document.getElementById("tab-procurement");
     const metaTab = document.getElementById("tab-meta");
@@ -741,7 +767,7 @@ function renderSynergyAndTrendRadar(enrichedTargets, watchlistItems, priceMap) {
         ...watchlistItems.map(w => (w.cardName || w.title || "").toLowerCase().trim())
     ]);
 
-    // Detect synergy clusters in user's active Chase Hunt / Watchlist
+    // Detect synergy clusters in user's active Buy List / Watchlist
     const scoredRecommendations = META_TREND_RADAR_DB.map(entry => {
         const matchedCards = entry.triggersOn.filter(trig => userCardSet.has(trig));
         const scry = priceMap[entry.cardName.toLowerCase()] || { usd: entry.baselineUsd, tix: 0 };
@@ -765,10 +791,10 @@ function renderSynergyAndTrendRadar(enrichedTargets, watchlistItems, priceMap) {
         <div style="background:#0b1120; border:1px solid #00ffcc; border-radius:8px; padding:14px; margin-bottom:16px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #1e293b; padding-bottom:8px;">
                 <div>
-                    <span style="color:#00ffcc; font-weight:800; font-size:13px;">🔮 ALGORITHMIC METAGAME & SYNERGY RADAR</span>
+                    <span style="color:#00ffcc; font-weight:800; font-size:13px;">🔮 TRENDING CARDS & COMBOS</span>
                     <span style="margin-left:8px; font-size:11px; color:#94a3b8;">Trending Breakouts, Price Movers & Cross-Archetype Fits for Your Active Cards</span>
                 </div>
-                <span style="font-size:10px; background:#065f46; color:#10b981; padding:3px 8px; border-radius:4px; font-weight:700;">LIVE ORACLE + TREND ENGINE</span>
+                <span style="font-size:10px; background:#065f46; color:#10b981; padding:3px 8px; border-radius:4px; font-weight:700;">LIVE TRENDS</span>
             </div>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap:12px;">
                 ${scoredRecommendations.map(rec => {
@@ -801,7 +827,7 @@ function renderSynergyAndTrendRadar(enrichedTargets, watchlistItems, priceMap) {
                             </div>
                             <div style="display:flex; gap:6px; margin-top:4px;">
                                 <button class="add-radar-card-btn" data-card="${escapeHtml(rec.cardName)}" style="flex:1; background:${rec.alreadyInDeck ? "#1e293b" : "#10b981"}; color:${rec.alreadyInDeck ? "#94a3b8" : "#030712"}; border:none; padding:6px 8px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">
-                                    ${rec.alreadyInDeck ? "✓ In Chase Hunt" : `🎯 + Chase Hunt ($${rec.liveUsd.toFixed(2)})`}
+                                    ${rec.alreadyInDeck ? "✓ In Buy List" : `🎯 + Buy List ($${rec.liveUsd.toFixed(2)})`}
                                 </button>
                                 <a href="${ebaySnipeUrl}" target="_blank" style="flex:1; text-align:center; background:#1e293b; border:1px solid #f59e0b; color:#f59e0b; text-decoration:none; padding:6px 8px; border-radius:4px; font-size:11px; font-weight:700;"> Snipe BIN <$${rec.snipeCeiling} ↗
                                 </a>
@@ -813,7 +839,7 @@ function renderSynergyAndTrendRadar(enrichedTargets, watchlistItems, priceMap) {
         </div>
     `;
 
-    // Mount inside Chase Hunt (#tab-procurement) AND Meta Analytics (#tab-meta)
+    // Mount inside Buy List (#tab-procurement) AND Meta Trends (#tab-meta)
     [procTab, metaTab].forEach((tab, idx) => {
         if (!tab) return;
         const containerId = idx === 0 ? "chase-synergy-radar-box" : "meta-synergy-radar-box";
@@ -865,7 +891,7 @@ function initMetaTracker() {
                 </div>
                 <div style="font-size:11px; color:#94a3b8;">Meta Share: <strong>${arch.share}</strong> | Format: <strong style="text-transform:uppercase;">${arch.format}</strong></div>
                 <div style="font-size:11px; color:#cbd5e1; background:#070d17; padding:8px; border-radius:4px; font-family:monospace;">${arch.staples.join("<br>")}</div>
-                <button class="load-meta-sample-btn" data-idx="${idx}" style="background:#10b981; color:#030712; border:none; padding:7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">⚡ Load Staples into Chase Hunt</button>
+                <button class="load-meta-sample-btn" data-idx="${idx}" style="background:#10b981; color:#030712; border:none; padding:7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">⚡ Load Staples into Buy List</button>
             </div>
         `).join("");
 
@@ -1071,7 +1097,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
             .trim();
     }
 
-    // Read current table rows from Active Procurement Targets to compute live totals
+    // Read current table rows from Cards to Buy to compute live totals
     function scrapeDOMTargets() {
         const rows = document.querySelectorAll("table tbody tr, tr");
         const items = [];
@@ -1107,7 +1133,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
                 wnBtn.href = `https://www.whatnot.com/search?query=${q}&type=livestreams`;
                 wnBtn.target = "_blank";
                 wnBtn.title = `Search live Whatnot streams for ${item.name} under $${snipeCeiling}`;
-                wnBtn.innerText = `⚡ WN Live`;
+                wnBtn.innerText = `⚡ Whatnot Live`;
 
                 const ebAucBtn = actionCell.querySelector("button:last-child, a:last-child");
                 if (ebAucBtn && ebAucBtn.innerText.includes("Auc")) {
@@ -1151,11 +1177,11 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
             // Always show the active loaded sheet first
             html += `
-                <div class="mp-deck-summary-item" title="Currently loaded in Chase Hunt">
+                <div class="mp-deck-summary-item" title="Currently loaded in Buy List">
                     <div class="mp-deck-name">🟢 ${escapeHtml(activeDeckName)}</div>
                     <div class="mp-deck-metrics">
-                        <span>Mkt: <strong class="mp-val-market">$${domMarketSum.toFixed(2)}</strong></span>
-                        <span>Chase: <strong class="mp-val-chase">$${domChaseSum.toFixed(2)}</strong></span>
+                        <span>Market: <strong class="mp-val-market">$${domMarketSum.toFixed(2)}</strong></span>
+                        <span>Need: <strong class="mp-val-chase">$${domChaseSum.toFixed(2)}</strong></span>
                     </div>
                 </div>
             `;
@@ -1181,8 +1207,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
                     <div class="mp-deck-summary-item">
                         <div class="mp-deck-name">📑 ${escapeHtml(dName)}</div>
                         <div class="mp-deck-metrics">
-                            <span>Mkt: <strong class="mp-val-market">${approx}$${dMkt.toFixed(2)}</strong></span>
-                            <span>Chase: <strong class="mp-val-chase">${approx}$${dChase.toFixed(2)}</strong></span>
+                            <span>Market: <strong class="mp-val-market">${approx}$${dMkt.toFixed(2)}</strong></span>
+                            <span>Need: <strong class="mp-val-chase">${approx}$${dChase.toFixed(2)}</strong></span>
                         </div>
                     </div>
                 `;
@@ -1362,7 +1388,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
                 </div>
                 <div class="mp-mode-pills" id="mp-currency-switcher" title="MTGGoldfish Style Ecosystem Filter">
                     <button type="button" class="mp-mode-pill active" data-curr="all">Paper + MTGO</button>
-                    <button type="button" class="mp-mode-pill" data-curr="snipe">⚡ Snipe Deals (<85%)</button>
+                    <button type="button" class="mp-mode-pill" data-curr="snipe">⚡ Deals Under 85%</button>
                 </div>
             </div>
         `;
@@ -1482,7 +1508,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         }
     });
 
-    // Pasting a decklist anywhere on the Chase Hunt tab (outside a text field) loads it into the Text List.
+    // Pasting a decklist anywhere on the Buy List tab (outside a text field) loads it into the Text List.
     document.addEventListener("paste", (e) => {
         const t = e.target;
         if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
@@ -1490,7 +1516,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         const ta = document.getElementById("decklist-input");
         if (!panel || !ta || !panel.classList.contains("active")) return;
         const text = (e.clipboardData && e.clipboardData.getData("text")) || "";
-        if (!/^\s*\d+[xX]?\s+\S/m.test(text)) return; // only things that look like "4 Card Name"
+        if (!MPLists.parse(text).cards.length) return; // only things Scout can read as a card list
         e.preventDefault();
         setDeckView("raw");
         ta.value = ta.value.trim() ? ta.value.replace(/\s+$/, "") + "\n" + text.trim() : text.trim();
@@ -1504,7 +1530,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         if (tile && tile.dataset.ebayUrl) MPAffiliate.open(tile.dataset.ebayUrl);
     });
 
-    // 3. Hydrate Active Procurement Targets Table Rows with Scryfall Art Crop, Set Badge & Mana Pips
+    // 3. Hydrate Cards to Buy Table Rows with Scryfall Art Crop, Set Badge & Mana Pips
     async function hydrateTableRowsWithScryfall() {
         const rows = document.querySelectorAll("table tbody tr, tr");
         for (const tr of rows) {
@@ -1596,9 +1622,9 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
                     <div class="mp-deck-progress-fill" style="width:${ratioPct}%;"></div>
                 </div>
                 <div class="mp-deck-quick-snipe">
-                    <a class="mp-mini-pill" href="https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent("MTG " + deckTitle + " lot")}&LH_Auction=1&_sop=1" target="_blank" title="Snipe live eBay auctions">🎯 eBay Snipe</a>
-                    <a class="mp-mini-pill" href="https://www.whatnot.com/search?query=${encodeURIComponent("MTG " + deckTitle)}&type=livestreams" target="_blank" title="Hunt live Whatnot streams">⚡ Whatnot</a>
-                    <a class="mp-mini-pill" href="https://www.tcgplayer.com/massentry" target="_blank" title="Open TCGplayer Mass Entry">🛒 TCG Mass</a>
+                    <a class="mp-mini-pill" href="https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent("MTG " + deckTitle + " lot")}&LH_Auction=1&_sop=1" target="_blank" title="Find live eBay auctions for this deck">🎯 eBay Auctions</a>
+                    <a class="mp-mini-pill" href="https://www.whatnot.com/search?query=${encodeURIComponent("MTG " + deckTitle)}&type=livestreams" target="_blank" title="Search live Whatnot streams">⚡ Whatnot</a>
+                    <a class="mp-mini-pill" href="https://www.tcgplayer.com/massentry" target="_blank" title="Open TCGplayer Mass Entry">🛒 TCG Mass Entry</a>
                 </div>
             `;
             card.appendChild(prog);

@@ -231,7 +231,7 @@
                         ${data.isDeck ? `⚡ Import ${data.decklist.length} Cards` : "📥 + Watchlist"}
                     </button>
                     <button id="mp-act-secondary" style="flex:0.9; padding:8px 10px; border-radius:5px; background:#1e293b; border:1px solid #334155; color:#f8fafc; font-weight:700; font-size:11px; cursor:pointer;">
-                        ${data.isDeck ? "📋 Copy MTGA" : "🎯 + Chase Hunt"}
+                        ${data.isDeck ? "📋 Copy MTGA" : "🎯 + Buy List"}
                     </button>
                     <a id="mp-snipe-bin" href="${ebaySniperUrl}" target="_blank" style="flex:1.2; padding:8px 10px; border-radius:5px; background:#1e293b; border:1px solid #f59e0b; color:#f59e0b; font-weight:700; font-size:11px; text-decoration:none; text-align:center;">
                         🎯 Snipe <85% Floor BIN ↗
@@ -387,7 +387,7 @@
                         mode: "procurement_single",
                         cardName: data.title
                     }, () => {
-                        secBtn.innerText = "✓ In Chase Hunt!";
+                        secBtn.innerText = "✓ In Buy List!";
                         secBtn.style.borderColor = "#10b981";
                         secBtn.style.color = "#10b981";
                     });
@@ -451,7 +451,7 @@
                     const spreadPct = (spreadUsd / marketFloor) * 100;
                     const inChaseList = chaseSet.has(cleanTitle.toLowerCase());
 
-                    // Highlight matching Chase Hunt cards directly on MTGScavenger!
+                    // Highlight matching Buy List cards directly on MTGScavenger!
                     if (inChaseList) {
                         el.style.outline = "2px solid #00ffcc";
                         el.style.boxShadow = "0 0 15px rgba(0,255,204,0.35)";
@@ -498,7 +498,7 @@
                             <span style="background:#1e293b; color:#f59e0b; font-size:10px; font-weight:800; padding:3px 7px; border-radius:4px;">MTGSCAVENGER LIVE ARBITRAGE HARVESTER</span>
                             <span style="font-size:12px; color:#cbd5e1;">
                                 Scanned <strong>${deals.length}</strong> Under-Market Auctions |
-                                <strong style="color:#00ffcc;">${chaseMatches.length}</strong> Match Your Active Chase Hunt
+                                <strong style="color:#00ffcc;">${chaseMatches.length}</strong> Match Your Buy List
                                 ${topDeal ? ` | Top Spread: <strong style="color:#10b981;">${topDeal.cardName} ($${topDeal.price} vs $${topDeal.marketFloor} Floor / +$${topDeal.spreadUsd.toFixed(2)})</strong>` : ""}
                             </span>
                         </div>
@@ -526,7 +526,7 @@
                         mode: "scavenger_batch",
                         deals: batch
                     }, () => {
-                        impBtn.innerText = `✓ Pushed ${batch.length} Deals to Watchlist & Arbitrage Desk!`;
+                        impBtn.innerText = `✓ Pushed ${batch.length} Deals to Watchlist & Arbitrage (Paper vs TIX)!`;
                         impBtn.style.background = "#059669";
                         impBtn.style.color = "#fff";
                     });

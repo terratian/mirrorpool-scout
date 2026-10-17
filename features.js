@@ -231,11 +231,12 @@
         const names = Object.keys(lists).sort((a, b) => ((lists[b] && lists[b].updatedAt) || 0) - ((lists[a] && lists[a].updatedAt) || 0));
         const cache = st.scryfallPriceCache || {};
         let html = `<div class="mp-tools">
-            <button class="mp-btn go" id="mp-deck-new">+ New deck (opens Chase Hunt)</button>
+            <button class="mp-btn go" id="mp-deck-new">+ New deck (opens Buy List)</button>
             <input class="mp-field" id="mp-deck-filter" placeholder="Filter decks..." style="width:200px">
+            <select class="mp-field" id="mp-decks-format" title="Format used by Copy list"><option value="plain">Copy as: plain list</option><option value="arena">Copy as: Arena / Moxfield</option><option value="manabox">Copy as: ManaBox CSV</option><option value="csv">Copy as: spreadsheet CSV</option></select>
             <span style="font-size:11px;color:#94a3b8">${names.length} saved. Decks are stored in this browser and survive restarts.</span></div>`;
         if (!names.length) {
-            html += `<div class="mp-empty">No saved decks yet. Paste a list in Chase Hunt and press "Save &amp; Compile". It will appear here.</div>`;
+            html += `<div class="mp-empty">No saved decks yet. Paste a list in Buy List and press "Save &amp; Compile". It will appear here.</div>`;
         } else {
             html += `<div class="mp-deck-grid">` + names.map((n, i) => {
                 const s = deckStats(lists[n], cache);
@@ -248,7 +249,7 @@
                     <div class="mp-row"><span>Still needed</span><strong style="color:#10b981">${ap}${money(s.need)}</strong></div>
                     <div class="mp-row"><span>Updated</span><strong>${esc(when)}</strong></div>
                     <div class="mp-actions">
-                        <button class="mp-btn go" data-deck-load="${i}">Load in Chase Hunt</button>
+                        <button class="mp-btn go" data-deck-load="${i}">Load in Buy List</button>
                         <button class="mp-btn" data-deck-copy="${i}">Copy list</button>
                         <button class="mp-btn" data-deck-ren="${i}">Rename</button>
                         <button class="mp-btn danger" data-deck-del="${i}">Delete</button>
@@ -256,8 +257,10 @@
             }).join("") + `</div>`;
         }
         if (body.dataset.sig === html) return;
+        const keepFmt = $("mp-decks-format") ? $("mp-decks-format").value : "";
         body.dataset.sig = html;
         body.innerHTML = html;
+        if (keepFmt && $("mp-decks-format")) $("mp-decks-format").value = keepFmt;
 
         $("mp-deck-new").addEventListener("click", () => {
             const nav = document.querySelector('[data-tab="tab-procurement"]');
@@ -283,7 +286,8 @@
         }));
         body.querySelectorAll("[data-deck-copy]").forEach((b) => b.addEventListener("click", async (e) => {
             const n = pick("data-deck-copy")(e); const entry = lists[n]; if (!entry) return;
-            const text = (entry.cards || []).map((c) => `${c.quantity || 1} ${c.cardName}`).join("\n");
+            const fsel = $("mp-decks-format");
+            const text = MPLists.format((entry.cards || []).map((c) => Object.assign({}, c, { qty: c.quantity || 1 })), fsel ? fsel.value : "plain");
             try { await navigator.clipboard.writeText(text); b.textContent = "✓ Copied"; } catch (err) { b.textContent = "Copy blocked"; }
         }));
         body.querySelectorAll("[data-deck-ren]").forEach((b) => b.addEventListener("click", async (e) => {

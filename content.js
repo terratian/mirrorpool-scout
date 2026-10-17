@@ -146,7 +146,7 @@ function extractBestEbayCardName(rawTitle) {
             </div>
             <div style="display:flex; gap:6px; margin-top:8px;">
                 <button id="mp-btn-save" style="flex:1; padding:7px 5px; border-radius:4px; background:#10b981; border:none; color:#030712; font-weight:800; font-size:11px; cursor:pointer;">📥 + Watchlist</button>
-                <button id="mp-btn-procure" style="flex:1; padding:7px 5px; border-radius:4px; background:#1e293b; border:1px solid #334155; color:#f8fafc; font-weight:700; font-size:11px; cursor:pointer;">🎯 + Chase Hunt</button>
+                <button id="mp-btn-procure" style="flex:1; padding:7px 5px; border-radius:4px; background:#1e293b; border:1px solid #334155; color:#f8fafc; font-weight:700; font-size:11px; cursor:pointer;">🎯 + Buy List</button>
                 <button id="mp-btn-dash" style="flex:1; padding:7px 5px; border-radius:4px; background:rgba(0,255,204,0.06); border:1px solid #00ffcc; color:#00ffcc; font-weight:700; font-size:11px; cursor:pointer;">⛶ Dashboard</button>
             </div>
         `;
@@ -209,7 +209,7 @@ function extractBestEbayCardName(rawTitle) {
                     cardName: searchTitle
                 }, (r) => {
                     if (chrome.runtime.lastError || !r || r.status !== "success") { procureBtn.innerText = "⚠ Failed"; return; }
-                    procureBtn.innerText = "✓ In Chase Hunt";
+                    procureBtn.innerText = "✓ In Buy List";
                     procureBtn.style.borderColor = "#10b981";
                     procureBtn.style.color = "#10b981";
                 });

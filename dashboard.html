@@ -518,7 +518,7 @@ table tbody td {
 .mp-pip-G { background: #86efac; }
 .mp-pip-C { background: #cbd5e1; }
 
-/* Visual Deck Grid Mode (Scryfall / Moxfield Visual Preview inside Chase Hunt) */
+/* Visual Deck Grid Mode (Scryfall / Moxfield Visual Preview inside Buy List) */
 #mp-visual-deck-grid {
     display: none;
     grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
@@ -613,7 +613,7 @@ table tbody td {
 }
 /* MP_ECOSYSTEM_CSS_END */
 
-/* MP_LAYOUT_V13_START: denser Chase Hunt (deck list left, targets right), no banner overlap */
+/* MP_LAYOUT_V13_START: denser Buy List (deck list left, targets right), no banner overlap */
 .main-content { padding-bottom: 60px; }
 .sidebar { padding-bottom: 52px; }
 #mp-saved-decks-sidebar { margin: 4px 0 14px 0; }
@@ -642,26 +642,26 @@ table tbody td {
         <div class="brand-logo">◈ MIRROR POOL™ SCOUT</div>
         <div class="nav-section">Workspace</div>
         <a class="nav-item active" data-tab="tab-watchlist">Live Watchlist</a>
-        <a class="nav-item" data-tab="tab-procurement">Chase Hunt</a>
-        <a class="nav-item" data-tab="tab-arbitrage">Arbitrage Desk</a>
-        <a class="nav-item" data-tab="tab-meta">Meta Analytics</a>
+        <a class="nav-item" data-tab="tab-procurement">Buy List</a>
+        <a class="nav-item" data-tab="tab-arbitrage">Arbitrage (Paper vs TIX)</a>
+        <a class="nav-item" data-tab="tab-meta">Meta Trends</a>
         <a class="nav-item" data-tab="tab-mydecks">📂 My Decks</a>
         <a class="nav-item" data-tab="tab-bookmarks">★ Bookmarks</a>
         <!-- MP_PORTFOLIO_START -->
         <div id="mp-saved-decks-sidebar">
             <div class="mp-sidebar-header">
-                <span>📂 Saved Decks & Chase</span>
+                <span>📂 My Lists</span>
             </div>
             <div id="mp-saved-decks-list">
                 <div style="color:#64748b; font-style:italic;">Loading portfolio...</div>
             </div>
             <div class="mp-portfolio-totals">
                 <div class="mp-total-row">
-                    <span>TCG Market Total:</span>
+                    <span>Market Total:</span>
                     <span id="mp-total-market" class="mp-val-market">$0.00</span>
                 </div>
                 <div class="mp-total-row">
-                    <span>Chase Needed:</span>
+                    <span>Still to Buy:</span>
                     <span id="mp-total-chase" class="mp-val-chase">$0.00</span>
                 </div>
             </div>
@@ -671,7 +671,7 @@ table tbody td {
         <a class="nav-item" data-tab="tab-settings">Settings & API</a>
         <div class="sidebar-footer">
             <div>Suite Connection: <strong>Standalone Mode</strong></div>
-            <div style="margin-top:4px; font-size:10px; color:#10b981;">Alpha Build v1.4</div>
+            <div style="margin-top:4px; font-size:10px; color:#10b981;">Alpha Build v1.4.1</div>
             <div style="margin-top:4px; font-size:10px; color:#94a3b8;">Some links are affiliate links. See Settings.</div>
         </div>
     </div>
@@ -688,16 +688,15 @@ table tbody td {
             <div id="watchlist-grid" class="grid-container"></div>
         </div>
 
-        <!-- 2. Chase Hunt (Deck Chase & Card Targets) -->
+        <!-- 2. Buy List (Deck Chase & Card Targets) -->
         <div id="tab-procurement" class="tab-panel">
-            <div class="page-title">Chase Hunt</div>
+            <div class="page-title">Buy List</div>
             <div class="card-box" id="mp-import-card" style="margin-bottom: 20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <span style="font-weight:700; font-size:14px; color:var(--accent-teal);">+ Create / Import Deck Target</span>
-                    <div style="display:flex; gap:8px;">
-                        <button class="btn btn-secondary" id="scrape-deck-btn">⚡ Scrape MTGDecks / Goldfish Tab</button>
-                        <button class="btn" id="export-manifest-btn">📋 Export Cart Manifest</button>
-                    </div>
+                <div style="font-weight:700; font-size:14px; color:var(--accent-teal); margin-bottom:8px;">+ Add a Deck or Card List</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+                    <button class="btn btn-secondary" id="scrape-deck-btn" title="Reads the deck from an open MTGGoldfish, MTGDecks or Magic.gg tab">⚡ Import from Open Deck Page</button>
+                    <button class="btn btn-secondary" id="mp-import-file-btn" type="button" title="ManaBox, TCGplayer, Moxfield, Deckbox CSV, MTGO .dek or plain .txt">📁 Import File</button>
+                    <input type="file" id="mp-import-file" accept=".csv,.txt,.dek,.tsv,text/plain,text/csv" style="display:none">
                 </div>
                 <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:10px; margin-bottom:10px;">
                     <input type="text" id="deck-name-input" placeholder="Deck Name (e.g. Dimir Rogues, Standard Burn)">
@@ -713,12 +712,23 @@ table tbody td {
                     </select>
                 </div>
                 <textarea id="decklist-input" placeholder="Paste decklist here (e.g. 4 Thoughtseize&#10;2 Land Tax&#10;1 Inkshield)..."></textarea>
-                <div style="display:flex; justify-content:flex-end; margin-top:8px;">
-                    <button class="btn" id="save-deck-btn">⚡ Save & Generate Chase Hunt Sheet</button>
+                <div id="mp-import-status-slot"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <select id="mp-export-format" title="Format to copy" style="width:auto; padding:6px 8px;">
+                            <option value="plain">Copy as: plain list</option>
+                            <option value="arena">Copy as: Arena / Moxfield</option>
+                            <option value="manabox">Copy as: ManaBox CSV</option>
+                            <option value="csv">Copy as: spreadsheet CSV</option>
+                        </select>
+                        <label style="font-size:11px; color:#94a3b8; display:flex; align-items:center; gap:4px; white-space:nowrap;"><input type="checkbox" id="mp-export-needed" checked> still needed only</label>
+                        <button class="btn btn-secondary" id="export-manifest-btn" title="Plain list also works for TCGplayer Mass Entry, MTGGoldfish and MTGO">📋 Copy Shopping List</button>
+                    </div>
+                    <button class="btn" id="save-deck-btn">⚡ Save List & Get Prices</button>
                 </div>
             </div>
             <div class="card-box" id="mp-targets-card">
-                <div style="font-weight:700; font-size:14px; margin-bottom:8px;">Active Procurement Targets</div>
+                <div style="font-weight:700; font-size:14px; margin-bottom:8px;">Cards to Buy</div>
                 <div id="procurement-container">
                     <table class="procurement-table">
                         <thead>
@@ -727,8 +737,8 @@ table tbody td {
                                 <th>Have / Need</th>
                                 <th>Paper (Mkt)</th>
                                 <th>MTGO TIX</th>
-                                <th>Basis Spent</th>
-                                <th>Marketplaces & Comps</th>
+                                <th>Paid So Far</th>
+                                <th>Where to Buy</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -738,9 +748,9 @@ table tbody td {
             </div>
         </div>
 
-        <!-- 3. Arbitrage Desk -->
+        <!-- 3. Arbitrage (Paper vs TIX) -->
         <div id="tab-arbitrage" class="tab-panel">
-            <div class="page-title">Arbitrage Desk</div>
+            <div class="page-title">Arbitrage (Paper vs TIX)</div>
             <div class="card-box" style="margin-bottom:20px;">
                 <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">
                     Real-time Cross-Platform Margin Engine. Measures paper marketplace floor costs vs digital MTGO TIX redemption value (~$0.92 cash-out conversion factor).
@@ -763,9 +773,9 @@ table tbody td {
             <div id="arbitrage-spread-grid" class="grid-container"></div>
         </div>
 
-        <!-- 4. Meta Analytics -->
+        <!-- 4. Meta Trends -->
         <div id="tab-meta" class="tab-panel">
-            <div class="page-title">Meta Analytics</div>
+            <div class="page-title">Meta Trends</div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <div style="font-size:13px; color:var(--text-muted);">Dominant Metagame Archetypes & Rising Card Trends</div>
                 <select id="meta-format-filter" style="width:140px;">
@@ -802,6 +812,7 @@ table tbody td {
     </div>
 
     <script src="affiliate.js"></script>
+    <script src="listformats.js"></script>
     <script src="dashboard.js"></script>
     <script src="features.js"></script>
 <!-- MP_OVERLAY_START -->

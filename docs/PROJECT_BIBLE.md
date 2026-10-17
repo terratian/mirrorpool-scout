@@ -132,3 +132,8 @@ Columns:
 - Rule: never render injected UI as a `<table>` inside #tab-procurement; the legacy name enhancer and sidebar scraper treat any table cell as a deck row.
 - `background.js` merges into `scryfallPriceCache` instead of replacing it.
 - Not wired: live eBay listing prices (needs eBay API keys); the scan uses Scryfall market data plus eBay search links.
+
+## v1.4.1 naming + list formats
+- Plain-language labels (collector/arbitrage friendly): Chase Hunt -> **Buy List**, Meta Analytics -> **Meta Trends**, Arbitrage Desk -> **Arbitrage (Paper vs TIX)**, "Active Procurement Targets" -> **Cards to Buy**, Basis Spent -> **Paid So Far**, Marketplaces & Comps -> **Where to Buy**, Snipe -> **Deals Under 85%**. Internal ids (`tab-procurement`, `procurementTargets`, `savedChaseLists`) are unchanged on purpose (stored user data).
+- `listformats.js` (`MPLists.parse` / `MPLists.format`) is the single list reader/writer: MTGGoldfish/MTGDecks plain, Arena/Moxfield `(SET) 123 *F*`, TCGplayer `[SET]`, MTGO `SB:` and .dek XML, ManaBox / TCGplayer / Moxfield / Deckbox CSV. Card records may carry optional `set`, `cn`, `foil`. Exports: plain (also TCGplayer Mass Entry), Arena/Moxfield, ManaBox CSV, generic CSV.
+- New menus: My Decks and Bookmarks (`mpBookmarks` storage key). `features.js` holds BIN totals, undervalued-paper scan (Scryfall prints, cached in `printingsCache`), My Decks, Bookmarks.
