@@ -1,4 +1,15 @@
+# Private Editable Source Vault
+.src/
+*.src.js
+
+# Internal Documentation & Helper Scripts (Keep Local Only)
+PROJECT_BIBLE.md
+BIBLE.md
+project_bible.md
+docs/
+export_codebase.sh
+build_release.sh
 node_modules/
 dist/
-.DS_Store
-*.zip
+*.pem
+*.crx
