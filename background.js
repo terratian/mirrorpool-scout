@@ -1,7 +1,6 @@
 // --- Mirror Pool Scout: Background Router & Scryfall Pricing Engine ---
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    // 1. Route migrated datasets from Popup / Content Scripts into Storage
     if (message.action === "sync_to_dashboard") {
         const payload = message.payload || message.cardData || message.data;
         if (!payload) {
@@ -9,29 +8,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return;
         }
 
-        let dataStoreKey = payload.targetKey || "general_scout_logs";
-        if (!payload.targetKey && payload.actionType) {
-            switch (payload.actionType) {
-                case "goldfish_card":
-                case "watchlist":
-                    dataStoreKey = "watchlist_cards";
-                    break;
-                case "tcg_product":
-                    dataStoreKey = "card_chase";
-                    break;
-                case "decklist_scrape":
-                    dataStoreKey = "currentDecklist";
-                    break;
-                default:
-                    dataStoreKey = "general_scout_logs";
-            }
-        }
-
+        let dataStoreKey = payload.targetKey || "watchlist_cards";
         chrome.storage.local.get([dataStoreKey], (result) => {
             let existingData = result[dataStoreKey] || [];
             if (!Array.isArray(existingData)) existingData = [existingData];
             existingData.unshift(payload);
-
             chrome.storage.local.set({ [dataStoreKey]: existingData }, () => {
                 sendResponse({ status: "success", storedKey: dataStoreKey });
             });
@@ -39,7 +20,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
-    // 2. Single Card Fuzzy Lookup (for eBay Content Script Badge & TCG Comps)
     if (message.action === "fetchComps") {
         const rawTitle = message.cardTitle || "";
         const cleanName = rawTitle
@@ -74,7 +54,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
-    // 3. Open Full-Tab Dashboard
     if (message.action === "openDashboard") {
         chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
         sendResponse({ status: "dashboard_opened" });
