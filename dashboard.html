@@ -1,776 +1,101 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Mirror Pool Scout</title>
-    <style>
-        :root {
-            --bg-base: #030712;
-            --bg-sidebar: #070d17;
-            --bg-panel: #0b1120;
-            --bg-card: #0f172a;
-            --border-color: #1e293b;
-            --border-subtle: #334155;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent-green: #10b981;
-            --accent-teal: #00ffcc;
-            --accent-blue: #38bdf8;
-            --accent-amber: #eab308;
-            --accent-red: #ef4444;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            height: 100vh;
-            background-color: var(--bg-base);
-            color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            overflow: hidden;
-        }
-        .sidebar {
-            width: 250px;
-            background-color: var(--bg-sidebar);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            padding: 16px;
-            flex-shrink: 0;
-        }
-        .brand-logo {
-            font-size: 15px;
-            font-weight: 800;
-            color: var(--accent-teal);
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            letter-spacing: 0.5px;
-        }
-        .nav-section {
-            font-size: 10px;
-            font-weight: 700;
-            color: #64748b;
-            text-transform: uppercase;
-            margin: 12px 0 6px 0;
-            letter-spacing: 0.8px;
-        }
-        .nav-item {
-            display: flex;
-            align-items: center;
-            padding: 10px 12px;
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 600;
-            border-radius: 6px;
-            margin-bottom: 4px;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-        .nav-item:hover, .nav-item.active {
-            background-color: var(--bg-card);
-            color: var(--text-main);
-        }
-        .nav-item.active {
-            border-left: 3px solid var(--accent-teal);
-            color: var(--accent-teal);
-        }
-        .sidebar-footer {
-            margin-top: auto;
-            font-size: 11px;
-            color: #64748b;
-            border-top: 1px solid var(--border-color);
-            padding-top: 12px;
-        }
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 24px 32px;
-            overflow-y: auto;
-        }
-        .page-title {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            color: var(--text-main);
-        }
-        .top-metrics-bar {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-        .metric-pill {
-            background: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 8px 14px;
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-        .metric-pill strong {
-            color: var(--accent-teal);
-            margin-left: 6px;
-        }
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-            gap: 16px;
-        }
-        .card-box {
-            background: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-        .card-box-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 10px;
-        }
-        .card-title {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--text-main);
-            max-width: 200px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .badge {
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 7px;
-            border-radius: 4px;
-            text-transform: uppercase;
-        }
-        .badge-deal-s { background: #238636; color: #fff; }
-        .badge-deal-a { background: #1f6feb; color: #fff; }
-        .badge-deal-b { background: #eab308; color: #000; }
-        .badge-deal-over { background: #da3633; color: #fff; }
-        .btn {
-            background: var(--accent-teal);
-            color: #030712;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 6px;
-            font-weight: 700;
-            font-size: 12px;
-            cursor: pointer;
-            transition: opacity 0.15s ease;
-        }
-        .btn:hover { opacity: 0.9; }
-        .btn-secondary {
-            background: var(--bg-card);
-            color: var(--text-main);
-            border: 1px solid var(--border-subtle);
-        }
-        .btn-danger {
-            background: transparent;
-            border: 1px solid #da3633;
-            color: #ff7b72;
-        }
-        .btn-danger:hover {
-            background: rgba(218,54,51,0.15);
-        }
-        textarea, input, select {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-main);
-            padding: 8px 12px;
-            font-family: inherit;
-            font-size: 12px;
-        }
-        textarea {
-            width: 100%;
-            font-family: monospace;
-            min-height: 90px;
-            resize: vertical;
-        }
-        .procurement-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 12px;
-            font-size: 12px;
-        }
-        .procurement-table th, .procurement-table td {
-            padding: 10px 12px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .procurement-table th {
-            color: var(--text-muted);
-            font-size: 11px;
-            text-transform: uppercase;
-        }
-        .deep-links a {
-            color: var(--accent-blue);
-            text-decoration: none;
-            font-size: 11px;
-            margin-right: 8px;
-        }
-        .deep-links a:hover { text-decoration: underline; }
-    /* MP_CUSTOM_CSS_START */
-#mp-saved-decks-sidebar {
-    margin: 12px 10px;
-    padding: 10px;
-    background: #0b1120;
-    border: 1px solid #1e293b;
-    border-radius: 6px;
-    font-size: 11px;
-    color: #cbd5e1;
-}
-.mp-sidebar-header {
-    color: #10b981;
-    font-weight: 700;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #1e293b;
-    padding-bottom: 4px;
-}
-.mp-deck-summary-item {
-    background: #030712;
-    border: 1px solid #1e293b;
-    border-radius: 4px;
-    padding: 6px 8px;
-    margin-bottom: 6px;
-    cursor: pointer;
-    transition: border-color 0.2s;
-}
-.mp-deck-summary-item:hover {
-    border-color: #10b981;
-}
-.mp-deck-name {
-    font-weight: 600;
-    color: #f8fafc;
-    margin-bottom: 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.mp-deck-metrics {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    color: #94a3b8;
-}
-.mp-val-market { color: #f59e0b; font-weight: 600; }
-.mp-val-chase { color: #10b981; font-weight: 600; }
-.mp-portfolio-totals {
-    margin-top: 8px;
-    padding-top: 6px;
-    border-top: 1px dashed #334155;
-    font-size: 11px;
-}
-.mp-total-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 3px;
-}
-/* Card Rollover Mockup Overlay */
-#mp-card-hover-overlay {
-    position: fixed;
-    z-index: 2147483647;
-    background: #0b1120;
-    border: 1px solid #10b981;
-    border-radius: 8px;
-    padding: 10px;
-    width: 235px;
-    box-shadow: 0 12px 28px rgba(0,0,0,0.85);
-    pointer-events: none;
-    color: #f8fafc;
-    display: none;
-}
-#mp-hover-card-img {
-    width: 100%;
-    height: auto;
-    border-radius: 6px;
-    margin-bottom: 8px;
-    background: #030712;
-    min-height: 180px;
-    object-fit: contain;
-}
-.mp-hover-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: #38bdf8;
-    margin: 0 0 6px 0;
-}
-.mp-hover-stat {
-    display: flex;
-    justify-content: space-between;
-    font-size: 11px;
-    margin: 3px 0;
-    color: #94a3b8;
-}
-.mp-snipe-btn {
-    background: #7c3aed;
-    color: #fff;
-    border: 1px solid #8b5cf6;
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-left: 4px;
-    text-decoration: none;
-    display: inline-block;
-}
-.mp-snipe-btn:hover { background: #6d28d9; }
-/* MP_CUSTOM_CSS_END */
-/* MP_ECOSYSTEM_CSS_START */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap");
-
-:root {
-    --mp-bg-abyss: #060913;
-    --mp-bg-surface: #0c1222;
-    --mp-bg-elevated: #131c31;
-    --mp-bg-glass: rgba(15, 23, 42, 0.78);
-    --mp-border-subtle: rgba(148, 163, 184, 0.14);
-    --mp-border-highlight: rgba(16, 185, 129, 0.45);
-    --mp-emerald: #10b981;
-    --mp-gold: #f59e0b;
-    --mp-sky: #38bdf8;
-    --mp-purple: #8b5cf6;
-    --mp-text-primary: #f8fafc;
-    --mp-text-secondary: #94a3b8;
-}
-
-body {
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-    background: radial-gradient(circle at 85% 10%, rgba(16, 185, 129, 0.05), transparent 40%),
-                radial-gradient(circle at 15% 85%, rgba(56, 189, 248, 0.05), transparent 40%),
-                var(--mp-bg-abyss) !important;
-    letter-spacing: -0.01em;
-}
-
-/* Tabular Numerals for Financial Precision (MTGGoldfish / TCGplayer standard) */
-td, .mp-val-market, .mp-val-chase, .mp-price-pill, #mp-total-market, #mp-total-chase {
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum";
-}
-
-/* Top Ecosystem Utility Ribbon (Scryfall + MTGGoldfish Switcher) */
-#mp-ecosystem-ribbon {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    background: var(--mp-bg-glass);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--mp-border-subtle);
-    border-radius: 10px;
-    padding: 8px 14px;
-    margin-bottom: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-}
-.mp-omni-search-wrap {
-    display: flex;
-    align-items: center;
-    background: #050811;
-    border: 1px solid rgba(148, 163, 184, 0.22);
-    border-radius: 7px;
-    padding: 5px 10px;
-    width: 320px;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-.mp-omni-search-wrap:focus-within {
-    border-color: var(--mp-emerald);
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
-}
-.mp-omni-search-wrap input {
-    background: transparent !important;
-    border: none !important;
-    color: var(--mp-text-primary) !important;
-    font-size: 12px !important;
-    width: 100%;
-    outline: none !important;
-    padding: 2px 6px !important;
-}
-.mp-mode-pills {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    background: #050811;
-    padding: 3px;
-    border-radius: 7px;
-    border: 1px solid var(--mp-border-subtle);
-}
-.mp-mode-pill {
-    background: transparent;
-    border: none;
-    color: var(--mp-text-secondary);
-    font-size: 11px;
-    font-weight: 600;
-    padding: 5px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-.mp-mode-pill.active {
-    background: var(--mp-bg-elevated);
-    color: var(--mp-emerald);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-}
-.mp-mode-pill:hover:not(.active) {
-    color: var(--mp-text-primary);
-}
-
-/* Polished Cards & Panels */
-.card, .panel, [class*="panel"], [class*="container"] {
-    border-color: var(--mp-border-subtle) !important;
-}
-
-/* Active Procurement Table — Scryfall / MTGGoldfish Dense Financial Styling */
-table {
-    border-collapse: separate !important;
-    border-spacing: 0 4px !important;
-    width: 100% !important;
-}
-table thead th {
-    font-size: 10px !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.08em !important;
-    color: #64748b !important;
-    padding: 8px 12px !important;
-    border-bottom: 1px solid var(--mp-border-subtle) !important;
-}
-table tbody tr {
-    background: rgba(12, 18, 34, 0.75) !important;
-    transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease !important;
-}
-table tbody tr:hover {
-    background: rgba(19, 28, 49, 0.95) !important;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 2px 0 0 var(--mp-emerald) !important;
-}
-table tbody td {
-    padding: 9px 12px !important;
-    vertical-align: middle !important;
-    border-top: 1px solid rgba(148, 163, 184, 0.06) !important;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.06) !important;
-}
-
-/* Card Target Cell with Scryfall Art Crop + Set Code + Mana Pips */
-.mp-card-cell-wrap {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.mp-art-thumb {
-    width: 38px;
-    height: 28px;
-    border-radius: 4px;
-    object-fit: cover;
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    background: #050811;
-    flex-shrink: 0;
-}
-.mp-card-meta-sub {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 2px;
-}
-.mp-set-badge {
-    font-family: "JetBrains Mono", monospace;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 1px 5px;
-    border-radius: 3px;
-    background: rgba(56, 189, 248, 0.12);
-    color: #38bdf8;
-    border: 1px solid rgba(56, 189, 248, 0.25);
-    text-transform: uppercase;
-}
-.mp-mana-pip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
-    font-size: 8px;
-    font-weight: 800;
-    color: #030712;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.6);
-}
-.mp-pip-W { background: #fef08a; }
-.mp-pip-U { background: #7dd3fc; }
-.mp-pip-B { background: #c084fc; }
-.mp-pip-R { background: #fca5a5; }
-.mp-pip-G { background: #86efac; }
-.mp-pip-C { background: #cbd5e1; }
-
-/* Visual Deck Grid Mode (Scryfall / Moxfield Visual Preview inside Chase Hunt) */
-#mp-visual-deck-grid {
-    display: none;
-    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
-    gap: 12px;
-    margin-top: 10px;
-    padding: 12px;
-    background: #050811;
-    border: 1px solid var(--mp-border-subtle);
-    border-radius: 8px;
-    max-height: 360px;
-    overflow-y: auto;
-}
-.mp-visual-card-tile {
-    position: relative;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #0b1120;
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    transition: transform 0.18s ease, border-color 0.18s ease;
-    cursor: pointer;
-}
-.mp-visual-card-tile:hover {
-    transform: translateY(-4px);
-    border-color: var(--mp-emerald);
-}
-.mp-visual-card-tile img {
-    width: 100%;
-    display: block;
-    aspect-ratio: 488 / 680;
-    object-fit: cover;
-}
-.mp-tile-qty-badge {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    background: rgba(3, 7, 18, 0.88);
-    color: #fff;
-    font-weight: 800;
-    font-size: 11px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    border: 1px solid rgba(255,255,255,0.2);
-}
-.mp-tile-price-ribbon {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to top, rgba(3,7,18,0.96), rgba(3,7,18,0.75));
-    padding: 6px 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 11px;
-}
-
-/* Upgraded Left Sidebar Portfolio Progress Bar */
-.mp-deck-progress-track {
-    width: 100%;
-    height: 4px;
-    background: #1e293b;
-    border-radius: 2px;
-    margin: 5px 0;
-    overflow: hidden;
-}
-.mp-deck-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #10b981, #38bdf8);
-    border-radius: 2px;
-    transition: width 0.3s ease;
-}
-.mp-deck-quick-snipe {
-    display: flex;
-    gap: 4px;
-    margin-top: 5px;
-}
-.mp-mini-pill {
-    flex: 1;
-    text-align: center;
-    padding: 2px 4px;
-    font-size: 9px;
-    font-weight: 600;
-    border-radius: 3px;
-    background: #131c31;
-    color: #cbd5e1;
-    text-decoration: none;
-    border: 1px solid rgba(148, 163, 184, 0.18);
-}
-.mp-mini-pill:hover {
-    border-color: var(--mp-emerald);
-    color: #fff;
-}
-/* MP_ECOSYSTEM_CSS_END */
-</style>
+  <meta charset="utf-8">
+  <title>Mirror Pool Scout | Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
-    <div class="sidebar">
-<!-- MP_PORTFOLIO_START -->
-<div id="mp-saved-decks-sidebar">
-    <div class="mp-sidebar-header">
-        <span>📂 Saved Decks & Chase</span>
+  <div class="sidebar">
+    <div class="brand">◈ MIRROR POOL™</div>
+    <ul class="nav">
+      <li class="active" data-target="watchlist">Live Watchlist</li>
+      <li data-target="hunter">Procurement Hunter</li>
+      <li data-target="meta">Meta Analytics</li>
+      <li data-target="prefs">Preferences</li>
+    </ul>
+    <div class="status-box">
+      <div class="status-label">SUITE CONNECTION</div>
+      <div class="status-val" style="color:#eab308;">Standalone Mode</div>
     </div>
-    <div id="mp-saved-decks-list">
-        <div style="color:#64748b; font-style:italic;">Loading portfolio...</div>
+  </div>
+  
+  <div class="main-content">
+    <div class="header">
+      <h1 id="view-title">Procurement Hunter</h1>
+      <div class="stats-row" id="header-stats">
+        <div class="stat-card">Market Total: <span id="stat-market-total" style="color:#eab308;">$0.00</span></div>
+        <div class="stat-card">Total Spent: <span id="stat-spent-total" style="color:#00ffcc;">$0.00</span></div>
+        <div class="stat-card">Net Variance: <span id="stat-variance" style="color:#3fb950;">$0.00</span></div>
+      </div>
     </div>
-    <div class="mp-portfolio-totals">
-        <div class="mp-total-row">
-            <span>TCG Market Total:</span>
-            <span id="mp-total-market" class="mp-val-market">$0.00</span>
-        </div>
-        <div class="mp-total-row">
-            <span>Chase Needed:</span>
-            <span id="mp-total-chase" class="mp-val-chase">$0.00</span>
-        </div>
-    </div>
-</div>
-<!-- MP_PORTFOLIO_END -->
-        <div class="brand-logo">◈ MIRROR POOL™ SCOUT</div>
-        <div class="nav-section">Workspace</div>
-        <a class="nav-item active" data-tab="tab-watchlist">Live Watchlist</a>
-        <a class="nav-item" data-tab="tab-procurement">Chase Hunt</a>
-        <a class="nav-item" data-tab="tab-arbitrage">Arbitrage Desk</a>
-        <a class="nav-item" data-tab="tab-meta">Meta Analytics</a>
-        <div class="nav-section">Preferences</div>
-        <a class="nav-item" data-tab="tab-settings">Settings & API</a>
-        <div class="sidebar-footer">
-            <div>Suite Connection: <strong>Standalone Mode</strong></div>
-            <div style="margin-top:4px; font-size:10px; color:#10b981;">Alpha Build v1.2</div>
-        </div>
-    </div>
+    
+    <!-- Tab 1: Live Watchlist -->
+    <div id="view-watchlist" class="grid-container view-section" style="display:none;"></div>
 
-    <div class="main-content">
-        <!-- 1. Live Watchlist -->
-        <div id="tab-watchlist" class="tab-panel active">
-            <div class="page-title">Live Watchlist</div>
-            <div class="top-metrics-bar">
-                <div class="metric-pill">Market Total:<strong id="wl-market-total">$0.00</strong></div>
-                <div class="metric-pill">Total Spent:<strong id="wl-total-spent">$0.00</strong></div>
-                <div class="metric-pill">Net Variance:<strong id="wl-net-variance">$0.00</strong></div>
-            </div>
-            <div id="watchlist-grid" class="grid-container"></div>
-        </div>
+    <!-- Tab 2: Procurement Hunter -->
+    <div id="view-hunter" class="view-section" style="padding: 30px; overflow-y: auto;">
+      <div class="deck-manager-header" style="display:flex; justify-content:space-between; margin-bottom: 20px;">
+        <select id="deck-select" style="background:#21262d; color:#c9d1d9; border:1px solid #30363d; padding:8px; border-radius:4px; font-weight:bold; flex:1; margin-right:10px;">
+          <option value="new">+ Create New Decklist</option>
+        </select>
+        <button id="btn-delete-deck" style="background:none; border:1px solid #da3633; color:#da3633; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">Delete List</button>
+      </div>
 
-        <!-- 2. Chase Hunt (Deck Chase & Card Targets) -->
-        <div id="tab-procurement" class="tab-panel">
-            <div class="page-title">Chase Hunt</div>
-            <div class="card-box" style="margin-bottom: 20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <span style="font-weight:700; font-size:14px; color:var(--accent-teal);">+ Create / Import Deck Target</span>
-                    <div style="display:flex; gap:8px;">
-                        <button class="btn btn-secondary" id="scrape-deck-btn">⚡ Scrape MTGDecks / Goldfish Tab</button>
-                        <button class="btn" id="export-manifest-btn">📋 Export Cart Manifest</button>
-                    </div>
-                </div>
-                <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:10px; margin-bottom:10px;">
-                    <input type="text" id="deck-name-input" placeholder="Deck Name (e.g. Dimir Rogues, Standard Burn)">
-                    <select id="printing-target-select">
-                        <option value="Normal">Normal Only</option>
-                        <option value="Foil">Foil Only</option>
-                        <option value="Any">Any Printing</option>
-                    </select>
-                    <select id="condition-floor-select">
-                        <option value="LP">LP or Better</option>
-                        <option value="NM">NM Only</option>
-                        <option value="Any">Any Condition</option>
-                    </select>
-                </div>
-                <textarea id="decklist-input" placeholder="Paste decklist here (e.g. 4 Thoughtseize&#10;2 Land Tax&#10;1 Inkshield)..."></textarea>
-                <div style="display:flex; justify-content:flex-end; margin-top:8px;">
-                    <button class="btn" id="save-deck-btn">⚡ Save & Generate Chase Hunt Sheet</button>
-                </div>
-            </div>
-            <div class="card-box">
-                <div style="font-weight:700; font-size:14px; margin-bottom:8px;">Active Procurement Targets</div>
-                <div id="procurement-container">
-                    <table class="procurement-table">
-                        <thead>
-                            <tr>
-                                <th>Card Target</th>
-                                <th>Required</th>
-                                <th>Acquired</th>
-                                <th>Market Floor</th>
-                                <th>Basis Spent</th>
-                                <th>Marketplaces & Comps</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="procurement-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
+      <div style="background:#0d1117; padding:20px; border:1px solid #30363d; border-radius:6px; margin-bottom: 20px;">
+        <div style="display:flex; gap:15px; margin-bottom:15px;">
+          <div style="flex:2;">
+            <label style="display:block; font-size:11px; color:#8b949e; margin-bottom:5px;">Deck Name</label>
+            <input type="text" id="deck-name" placeholder="e.g. Dimir Rogues" style="width:100%; background:#21262d; border:1px solid #30363d; color:#fff; padding:8px; border-radius:4px;">
+          </div>
+          <div style="flex:1;">
+            <label style="display:block; font-size:11px; color:#8b949e; margin-bottom:5px;">Printing Target</label>
+            <select id="pref-printing" style="width:100%; background:#21262d; border:1px solid #30363d; color:#fff; padding:8px; border-radius:4px;">
+              <option value="Any">Any Printing</option>
+              <option value="Normal" selected>Normal Only</option>
+              <option value="Foil">Foil Only</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label style="display:block; font-size:11px; color:#8b949e; margin-bottom:5px;">Condition Floor</label>
+            <select id="pref-condition" style="width:100%; background:#21262d; border:1px solid #30363d; color:#fff; padding:8px; border-radius:4px;">
+              <option value="Any" selected>Any Condition</option>
+              <option value="Near Mint">Near Mint (NM)</option>
+              <option value="Lightly Played">Lightly Played (LP)</option>
+            </select>
+          </div>
         </div>
-
-        <!-- 3. Arbitrage Desk -->
-        <div id="tab-arbitrage" class="tab-panel">
-            <div class="page-title">Arbitrage Desk</div>
-            <div class="card-box" style="margin-bottom:20px;">
-                <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">
-                    Real-time Cross-Platform Margin Engine. Measures paper marketplace floor costs vs digital MTGO TIX redemption value (~$0.92 cash-out conversion factor).
-                </div>
-                <div id="arbitrage-hud" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; background:var(--bg-card); padding:14px; border-radius:6px;">
-                    <div>
-                        <div style="font-size:11px; color:#94a3b8; text-transform:uppercase;">Aggregate Paper Floor</div>
-                        <div id="arb-paper-total" style="font-size:18px; font-weight:800; color:var(--accent-green);">$0.00</div>
-                    </div>
-                    <div>
-                        <div style="font-size:11px; color:#94a3b8; text-transform:uppercase;">MTGO Redemption Cash-Out</div>
-                        <div id="arb-mtgo-total" style="font-size:18px; font-weight:800; color:var(--accent-blue);">0.00 TIX ($0.00)</div>
-                    </div>
-                    <div>
-                        <div style="font-size:11px; color:#94a3b8; text-transform:uppercase;">Net Arbitrage Spread</div>
-                        <div id="arb-spread-total" style="font-size:18px; font-weight:800; color:var(--accent-amber);">$0.00 (0.0%)</div>
-                    </div>
-                </div>
-            </div>
-            <div id="arbitrage-spread-grid" class="grid-container"></div>
+        <label style="display:block; font-size:11px; color:#8b949e; margin-bottom:5px;">Decklist (Format: "4 Brainstorm")</label>
+        <textarea id="deck-import-area" placeholder="Paste your list here..." style="width:100%; height:120px; background:#21262d; color:#c9d1d9; border:1px solid #30363d; padding:12px; border-radius:4px; font-family:monospace; resize:vertical; margin-bottom:15px; box-sizing: border-box;"></textarea>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div id="deck-save-status" style="color:#3fb950; font-size:12px; font-weight:bold;"></div>
+          <button id="btn-parse-deck" style="background:#238636; color:#fff; border:none; padding:10px 20px; border-radius:4px; font-weight:bold; cursor:pointer;">⚡ Save & Generate Procurement Sheet</button>
         </div>
-
-        <!-- 4. Meta Analytics -->
-        <div id="tab-meta" class="tab-panel">
-            <div class="page-title">Meta Analytics</div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <div style="font-size:13px; color:var(--text-muted);">Dominant Metagame Archetypes & Rising Card Trends</div>
-                <select id="meta-format-filter" style="width:140px;">
-                    <option value="Standard">Standard</option>
-                    <option value="Modern">Modern</option>
-                    <option value="Commander">Commander</option>
-                    <option value="Pioneer">Pioneer</option>
-                </select>
-            </div>
-            <div id="meta-tracker-grid" class="grid-container"></div>
-        </div>
-
-        <!-- 5. Settings -->
-        <div id="tab-settings" class="tab-panel">
-            <div class="page-title">Settings & Engine Configuration</div>
-            <div class="card-box">
-                <div style="font-size:13px; margin-bottom:8px;">Scryfall Public Comp Engine: <strong style="color:var(--accent-green);">Active</strong></div>
-                <div style="font-size:13px; margin-bottom:8px;">eBay Structured DOM Parser: <strong style="color:var(--accent-green);">Active (Item Specifics + Sanitizer)</strong></div>
-                <div style="font-size:13px;">Proxmox / Suite Backend Sync: <span style="color:#64748b;">Ready for Phase 3 Migration</span></div>
-            </div>
-        </div>
+      </div>
+      <div id="hunter-results" class="grid-container" style="padding:0;"></div>
     </div>
 
-    <script src="dashboard.js"></script>
-<!-- MP_OVERLAY_START -->
-<div id="mp-card-hover-overlay">
-    <img id="mp-hover-card-img" src="" alt="Card Preview" />
-    <div class="mp-hover-title" id="mp-hover-card-title">Card Name</div>
-    <div class="mp-hover-stat"><span>TCG Market:</span> <span id="mp-hover-tcg" class="mp-val-market">$0.00</span></div>
-    <div class="mp-hover-stat"><span>Chase Target (<85%):</span> <span id="mp-hover-snipe" class="mp-val-chase">$0.00</span></div>
-    <div class="mp-hover-stat"><span>Live Auctions:</span> <span id="mp-hover-platforms" style="color:#a78bfa;">eBay • Whatnot</span></div>
-</div>
-<!-- MP_OVERLAY_END -->
+    <!-- Tab 3: Meta Analytics -->
+    <div id="view-meta" class="view-section" style="display:none; padding: 30px; overflow-y: auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+        <h2 style="margin:0; color:#00ffcc;">Global Meta Tracker</h2>
+        <select id="meta-format-select" style="background:#21262d; color:#c9d1d9; border:1px solid #30363d; padding:8px; border-radius:4px; font-weight:bold;">
+          <option value="Standard">Standard</option>
+          <option value="Pioneer">Pioneer</option>
+          <option value="Modern">Modern</option>
+          <option value="Commander">Commander</option>
+        </select>
+      </div>
+      <div id="meta-results-container" class="grid-container" style="padding:0; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"></div>
+    </div>
+
+    <!-- Tab 4: Preferences -->
+    <div id="view-prefs" class="view-section" style="display:none; padding: 30px;">
+      <h2 style="color:#00ffcc; margin-top:0;">Global Extension Preferences</h2>
+      <p style="color:#8b949e;">Suite integration targets and API throttling configuration.</p>
+    </div>
+  </div>
+  <script src="dashboard.js"></script>
 </body>
 </html>

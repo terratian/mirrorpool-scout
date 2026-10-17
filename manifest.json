@@ -1,31 +1,23 @@
 {
   "manifest_version": 3,
-  "name": "Mirror Pool Scout",
+  "name": "Mirror Pool Sniper & Overwatch",
   "version": "1.2.0",
-  "description": "Live MTG market procurement, visual decklist parsing, and financial tracking.",
+  "description": "Cross-platform card auction sniper, extended bidding sentinel, and live comps radar",
   "permissions": [
     "storage",
     "activeTab",
-    "alarms",
-    "scripting"
+    "alarms"
   ],
   "action": {
-    "default_title": "Mirror Pool Scout",
-    "default_icon": {
-      "16": "icon16.png",
-      "48": "icon48.png",
-      "128": "icon128.png"
-    }
+    "default_popup": "popup.html",
+    "default_title": "Mirror Pool Scout"
   },
   "host_permissions": [
     "*://*.ebay.com/*",
     "*://*.tcgplayer.com/*",
     "*://*.fanaticscollect.com/*",
     "*://*.goldin.co/*",
-    "*://*.cardmarket.com/*",
-    "*://*.mtgdecks.net/*",
-    "*://*.mtggoldfish.com/*",
-    "https://api.scryfall.com/*"
+    "*://*.cardmarket.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -34,7 +26,10 @@
     {
       "matches": [
         "*://*.ebay.com/itm/*",
-        "*://*.tcgplayer.com/product/*"
+        "*://*.tcgplayer.com/product/*",
+        "*://*.fanaticscollect.com/*",
+        "*://*.goldin.co/*",
+        "*://*.cardmarket.com/*"
       ],
       "js": [
         "content.js"
@@ -44,10 +39,5 @@
       ],
       "run_at": "document_idle"
     }
-  ],
-  "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
-  }
+  ]
 }
