@@ -999,3 +999,240 @@ function initSettingsPanel() {
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === "local") syncAllPanels();
 });
+
+// === MP_CHASE_PORTFOLIO_START ===
+(function() {
+    // Sanitize card name by stripping leading quantities, set codes like (FRA), and collector numbers
+    function cleanCardName(raw) {
+        if (!raw) return "";
+        return raw
+            .replace(/^\d+[xX]?\s+/, "")           // Strip leading "1 " or "4x "
+            .replace(/\s*\([A-Za-z0-9]{2,5}\)\s*\d*.*$/, "") // Strip "(FRA) 273" or "(WOE) 234"
+            .replace(/\s*\[.*?\]/g, "")           // Strip "[NEC - 93]"
+            .split("|")[0]
+            .trim();
+    }
+
+    // Read current table rows from Active Procurement Targets to compute live totals
+    function scrapeDOMTargets() {
+        const rows = document.querySelectorAll("table tbody tr, tr");
+        const items = [];
+        rows.forEach(tr => {
+            const cells = tr.querySelectorAll("td");
+            if (cells.length >= 4) {
+                const name = cleanCardName(cells[0].innerText);
+                const reqText = cells[1].innerText.trim(); // e.g., "0 / 1" or "0 / 2"
+                const priceText = cells[2].innerText.replace(/[^0-9.]/g, "");
+                const parts = reqText.split("/").map(s => parseInt(s.trim(), 10));
+                const acquired = !isNaN(parts[0]) ? parts[0] : 0;
+                const required = !isNaN(parts[1]) ? parts[1] : 1;
+                const unitPrice = parseFloat(priceText) || 0;
+                if (name && unitPrice >= 0) {
+                    items.push({ name, acquired, required, unitPrice, rowEl: tr });
+                }
+            }
+        });
+        return items;
+    }
+
+    // Inject Whatnot & Live Auction Snipe buttons into each row Actions cell
+    function enhanceChaseActionButtons() {
+        const items = scrapeDOMTargets();
+        items.forEach(item => {
+            const actionCell = item.rowEl.querySelector("td:last-child");
+            if (actionCell && !actionCell.querySelector(".mp-whatnot-snipe")) {
+                const snipeCeiling = (item.unitPrice * 0.85).toFixed(2);
+                const q = encodeURIComponent("MTG " + item.name);
+                
+                const wnBtn = document.createElement("a");
+                wnBtn.className = "mp-snipe-btn mp-whatnot-snipe";
+                wnBtn.href = `https://www.whatnot.com/search?query=${q}&type=livestreams`;
+                wnBtn.target = "_blank";
+                wnBtn.title = `Search live Whatnot streams for ${item.name} under $${snipeCeiling}`;
+                wnBtn.innerText = `⚡ WN Live`;
+
+                const ebAucBtn = actionCell.querySelector("button:last-child, a:last-child");
+                if (ebAucBtn && ebAucBtn.innerText.includes("Auc")) {
+                    ebAucBtn.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        window.open(`https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Auction=1&_sop=1&_udhi=${snipeCeiling}`, "_blank");
+                    });
+                }
+                actionCell.appendChild(wnBtn);
+            }
+        });
+    }
+
+    // Render Saved Decks & Total Portfolio in Left Sidebar
+    function renderSidebarPortfolio() {
+        const listEl = document.getElementById("mp-saved-decks-list");
+        const marketEl = document.getElementById("mp-total-market");
+        const chaseEl = document.getElementById("mp-total-chase");
+        if (!listEl || !marketEl || !chaseEl) return;
+
+        const domTargets = scrapeDOMTargets();
+        let domMarketSum = 0;
+        let domChaseSum = 0;
+        domTargets.forEach(t => {
+            domMarketSum += t.unitPrice * t.required;
+            const needed = Math.max(0, t.required - t.acquired);
+            domChaseSum += t.unitPrice * needed;
+        });
+
+        chrome.storage.local.get(null, (store) => {
+            const savedDecks = store.savedDecks || store.chaseLists || store.decks || [];
+            const deckTitleInput = document.querySelector("input[type=text]");
+            const activeDeckName = (deckTitleInput && deckTitleInput.value.trim()) ? deckTitleInput.value.trim() : "Active Chase Sheet";
+
+            let html = "";
+            let grandMarket = domMarketSum;
+            let grandChase = domChaseSum;
+
+            // Always show the active loaded sheet first
+            html += `
+                <div class="mp-deck-summary-item" title="Currently loaded in Chase Hunt">
+                    <div class="mp-deck-name">🟢 ${activeDeckName}</div>
+                    <div class="mp-deck-metrics">
+                        <span>Mkt: <strong class="mp-val-market">$${domMarketSum.toFixed(2)}</strong></span>
+                        <span>Chase: <strong class="mp-val-chase">$${domChaseSum.toFixed(2)}</strong></span>
+                    </div>
+                </div>
+            `;
+
+            if (Array.isArray(savedDecks)) {
+                savedDecks.forEach(d => {
+                    const dName = d.name || d.deckName || d.title || "Saved Deck";
+                    if (dName === activeDeckName) return;
+                    let dMkt = 0;
+                    let dChase = 0;
+                    const cards = d.cards || d.items || d.list || [];
+                    cards.forEach(c => {
+                        const qty = c.required || c.quantity || c.qty || 1;
+                        const acq = c.acquired || 0;
+                        const p = parseFloat(c.price || c.marketPrice || c.unitPrice || 3.50);
+                        dMkt += p * qty;
+                        dChase += p * Math.max(0, qty - acq);
+                    });
+                    grandMarket += dMkt;
+                    grandChase += dChase;
+                    html += `
+                        <div class="mp-deck-summary-item">
+                            <div class="mp-deck-name">📑 ${dName}</div>
+                            <div class="mp-deck-metrics">
+                                <span>Mkt: <strong class="mp-val-market">$${dMkt.toFixed(2)}</strong></span>
+                                <span>Chase: <strong class="mp-val-chase">$${dChase.toFixed(2)}</strong></span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            listEl.innerHTML = html;
+            marketEl.innerText = `$${grandMarket.toFixed(2)}`;
+            chaseEl.innerText = `$${grandChase.toFixed(2)}`;
+        });
+    }
+
+    // Position and Display Card Rollover Overlay safely inside Viewport
+    const fallbackSvg = "data:image/svg+xml;utf8," + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="220" height="300" viewBox="0 0 220 300">
+            <rect width="220" height="300" rx="12" fill="#0f172a" stroke="#334155" stroke-width="2"/>
+            <text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" fill="#38bdf8" font-family="sans-serif" font-size="14" font-weight="bold">MIRROR POOL™</text>
+            <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="11">Custom / Unindexed Set</text>
+        </svg>
+    `);
+
+    function showCardOverlay(cardName, priceVal, clientX, clientY) {
+        const overlay = document.getElementById("mp-card-hover-overlay");
+        const img = document.getElementById("mp-hover-card-img");
+        const title = document.getElementById("mp-hover-card-title");
+        const tcg = document.getElementById("mp-hover-tcg");
+        const snipe = document.getElementById("mp-hover-snipe");
+        if (!overlay || !cardName) return;
+
+        const clean = cleanCardName(cardName);
+        if (!clean || clean.length < 2) return;
+
+        if (title.innerText !== clean) {
+            title.innerText = clean;
+            img.onerror = () => { img.src = fallbackSvg; };
+            img.src = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(clean)}&format=image&version=normal`;
+        }
+
+        const numPrice = parseFloat(priceVal) || 3.50;
+        tcg.innerText = `$${numPrice.toFixed(2)}`;
+        snipe.innerText = `< $${(numPrice * 0.85).toFixed(2)}`;
+
+        overlay.style.display = "block";
+        const rect = overlay.getBoundingClientRect();
+        const pad = 16;
+        let left = clientX + pad;
+        let top = clientY + pad;
+
+        if (left + rect.width > window.innerWidth - 10) {
+            left = clientX - rect.width - pad;
+        }
+        if (top + rect.height > window.innerHeight - 10) {
+            top = Math.max(10, window.innerHeight - rect.height - 10);
+        }
+        overlay.style.left = `${left}px`;
+        overlay.style.top = `${top}px`;
+    }
+
+    function hideCardOverlay() {
+        const overlay = document.getElementById("mp-card-hover-overlay");
+        if (overlay) overlay.style.display = "none";
+    }
+
+    // Event Delegation for Table Rows & Decklist Textarea
+    document.addEventListener("mousemove", (e) => {
+        // 1. Check if hovering over the first column (Card Target) in the Procurement table
+        const td = e.target.closest("table tbody tr td:first-child, tr td:first-child");
+        if (td) {
+            const tr = td.parentElement;
+            const cells = tr.querySelectorAll("td");
+            const priceText = cells.length >= 3 ? cells[2].innerText.replace(/[^0-9.]/g, "") : "3.50";
+            showCardOverlay(td.innerText, priceText, e.clientX, e.clientY);
+            return;
+        }
+
+        // 2. Check if hovering over a line inside the Deck Target textarea
+        if (e.target.tagName === "TEXTAREA" && e.target.value.trim()) {
+            const ta = e.target;
+            const rect = ta.getBoundingClientRect();
+            const relY = e.clientY - rect.top + ta.scrollTop - 8;
+            const lineHeight = parseInt(window.getComputedStyle(ta).lineHeight, 10) || 18;
+            const lineIndex = Math.floor(relY / lineHeight);
+            const lines = ta.value.split("\n");
+            if (lineIndex >= 0 && lineIndex < lines.length && lines[lineIndex].trim()) {
+                const cName = cleanCardName(lines[lineIndex]);
+                // Match price from table if present
+                const domMatch = scrapeDOMTargets().find(t => t.name.toLowerCase() === cName.toLowerCase());
+                const price = domMatch ? domMatch.unitPrice : 4.25;
+                showCardOverlay(cName, price, e.clientX, e.clientY);
+                return;
+            }
+        }
+
+        hideCardOverlay();
+    });
+
+    // Initialize and observe DOM mutations so newly scraped or compiled decks automatically update
+    function initMirrorPoolEnhancements() {
+        enhanceChaseActionButtons();
+        renderSidebarPortfolio();
+        const observer = new MutationObserver(() => {
+            enhanceChaseActionButtons();
+            renderSidebarPortfolio();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initMirrorPoolEnhancements);
+    } else {
+        initMirrorPoolEnhancements();
+    }
+})();
+// === MP_CHASE_PORTFOLIO_END ===
+

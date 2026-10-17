@@ -220,10 +220,143 @@
             margin-right: 8px;
         }
         .deep-links a:hover { text-decoration: underline; }
-    </style>
+    /* MP_CUSTOM_CSS_START */
+#mp-saved-decks-sidebar {
+    margin: 12px 10px;
+    padding: 10px;
+    background: #0b1120;
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #cbd5e1;
+}
+.mp-sidebar-header {
+    color: #10b981;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 4px;
+}
+.mp-deck-summary-item {
+    background: #030712;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+.mp-deck-summary-item:hover {
+    border-color: #10b981;
+}
+.mp-deck-name {
+    font-weight: 600;
+    color: #f8fafc;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mp-deck-metrics {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #94a3b8;
+}
+.mp-val-market { color: #f59e0b; font-weight: 600; }
+.mp-val-chase { color: #10b981; font-weight: 600; }
+.mp-portfolio-totals {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px dashed #334155;
+    font-size: 11px;
+}
+.mp-total-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+}
+/* Card Rollover Mockup Overlay */
+#mp-card-hover-overlay {
+    position: fixed;
+    z-index: 2147483647;
+    background: #0b1120;
+    border: 1px solid #10b981;
+    border-radius: 8px;
+    padding: 10px;
+    width: 235px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.85);
+    pointer-events: none;
+    color: #f8fafc;
+    display: none;
+}
+#mp-hover-card-img {
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    background: #030712;
+    min-height: 180px;
+    object-fit: contain;
+}
+.mp-hover-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #38bdf8;
+    margin: 0 0 6px 0;
+}
+.mp-hover-stat {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin: 3px 0;
+    color: #94a3b8;
+}
+.mp-snipe-btn {
+    background: #7c3aed;
+    color: #fff;
+    border: 1px solid #8b5cf6;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: 4px;
+    text-decoration: none;
+    display: inline-block;
+}
+.mp-snipe-btn:hover { background: #6d28d9; }
+/* MP_CUSTOM_CSS_END */
+</style>
 </head>
 <body>
     <div class="sidebar">
+<!-- MP_PORTFOLIO_START -->
+<div id="mp-saved-decks-sidebar">
+    <div class="mp-sidebar-header">
+        <span>📂 Saved Decks & Chase</span>
+    </div>
+    <div id="mp-saved-decks-list">
+        <div style="color:#64748b; font-style:italic;">Loading portfolio...</div>
+    </div>
+    <div class="mp-portfolio-totals">
+        <div class="mp-total-row">
+            <span>TCG Market Total:</span>
+            <span id="mp-total-market" class="mp-val-market">$0.00</span>
+        </div>
+        <div class="mp-total-row">
+            <span>Chase Needed:</span>
+            <span id="mp-total-chase" class="mp-val-chase">$0.00</span>
+        </div>
+    </div>
+</div>
+<!-- MP_PORTFOLIO_END -->
         <div class="brand-logo">◈ MIRROR POOL™ SCOUT</div>
         <div class="nav-section">Workspace</div>
         <a class="nav-item active" data-tab="tab-watchlist">Live Watchlist</a>
@@ -352,5 +485,14 @@
     </div>
 
     <script src="dashboard.js"></script>
+<!-- MP_OVERLAY_START -->
+<div id="mp-card-hover-overlay">
+    <img id="mp-hover-card-img" src="" alt="Card Preview" />
+    <div class="mp-hover-title" id="mp-hover-card-title">Card Name</div>
+    <div class="mp-hover-stat"><span>TCG Market:</span> <span id="mp-hover-tcg" class="mp-val-market">$0.00</span></div>
+    <div class="mp-hover-stat"><span>Chase Target (<85%):</span> <span id="mp-hover-snipe" class="mp-val-chase">$0.00</span></div>
+    <div class="mp-hover-stat"><span>Live Auctions:</span> <span id="mp-hover-platforms" style="color:#a78bfa;">eBay • Whatnot</span></div>
+</div>
+<!-- MP_OVERLAY_END -->
 </body>
 </html>
