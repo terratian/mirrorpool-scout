@@ -21,8 +21,8 @@ files=(
     "background.js"
     "manifest.json"
     "PROJECT_BIBLE.md"
-    "BIBLE.md"
-    "project_bible.md"
+    
+    
 )
 
 for file in "${files[@]}"; do
