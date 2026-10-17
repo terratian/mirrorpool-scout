@@ -1,9 +1,9 @@
 # MIRROR POOL™ SCOUT — MASTER PROJECT BIBLE & AI CONTEXT REGISTRY
-**Last Updated:** October 16, 2026
+**Last Updated:** October 17, 2026
 **Repository:** `github.com:terratian/mirrorpool-scout.git` (`~/mirrorpoolbeta/mirrorpool-scout`)
-**Current Version:** 1.2.x (Standalone Alpha Build)
+**Current Version:** 1.3.1 (Standalone Alpha Build)
 **Developer:** Joshua Sultan (Solo Developer)
-**Distribution & Licensing:** $9 Lifetime Early-Access License via Gumroad (manual `.zip` sideload with non-transferable license key; removes Alpha watermark and unlocks bulk manifest optimization). Future recurring tier ($9.99/mo) planned for Mirror Pool Suite.
+**Distribution & Licensing:** $9 Lifetime Early-Access License via Gumroad (`https://mrjoshua.gumroad.com/l/mirrorpoolscout`; keys are verified against Gumroad's `licenses/verify` API from Settings; manual `.zip` sideload; removes Alpha watermark and unlocks bulk manifest optimization). Future recurring tier ($9.99/mo) planned for Mirror Pool Suite.
 
 ---
 
@@ -13,6 +13,12 @@ Any AI assistant or developer modifying this repository MUST obey these rules to
 2. **Use Idempotent, Marker-Scoped Patches:** Always inspect the target file first or use Python scripts with explicit start/end markers (e.g., `/* MP_CUSTOM_CSS_START */` and `// === MP_CHASE_PORTFOLIO_START ===`) to inject or update code safely.
 3. **Full-Tab Dashboard Architecture:** `dashboard.html` is a full-screen, two-column workspace application opened in its own dedicated browser tab (`chrome.tabs.create`), NOT squeezed into Chrome's narrow `sidePanel`.
 4. **Single Consolidated Bible:** `PROJECT_BIBLE.md` (mirrored in `docs/PROJECT_BIBLE.md`) is the sole canonical documentation file. Legacy duplicates (`BIBLE.md`, `project_bible.md`) are permanently deprecated and removed.
+5. **Never revert to an old baseline wholesale.** Tag known-good commits (`git tag good-YYYYMMDD`). If a build breaks, fix forward or `git checkout <tag> -- <file>`; do not "revert to stable baseline" over feature work (this once deleted ~1,500 lines of dashboard).
+6. **No regex "obfuscators".** `build_release.sh` ships readable code (optional `MINIFY=1` uses terser). A comment-stripping regex once truncated `name.includes(" // ")` and broke `background.js`. The Chrome Web Store also rejects obfuscated code.
+7. **MV3 CSP:** no inline `onclick=` / `onerror=` attributes in extension pages (they silently never run). Use `addEventListener` / delegation.
+8. **MutationObserver rule:** any observer on `document.body` must call code that is idempotent (compare a signature before writing to the DOM), otherwise it loops forever.
+9. **Escape everything** interpolated into `innerHTML` (`escapeHtml`) and only allow `http(s)` hrefs (`safeHttpUrl`). Card, deck and listing names come from third-party pages.
+10. **Do not give AI assistants affiliate/license IDs to "wire in".** All IDs live in `affiliate.js` and the `GUMROAD_*` constants at the top of `dashboard.js`.
 
 ---
 
@@ -78,20 +84,25 @@ Columns:
 
 ## 4. FILE & STORAGE SCHEMA REFERENCE
 
-### Core Files
-* `manifest.json` — Manifest V3 configuration (`storage`, `activeTab`, `alarms`, `scripting`), host permissions for TCG marketplaces, background service worker (`background.js`), popup (`popup.html`), and content scripts (`content.js`, `content.css`).
-* `dashboard.html` — Full-tab two-column UI markup and embedded CSS styles.
-* `dashboard.js` — Dashboard state management, tab routing, Scryfall pricing lookups, Chase Hunt compilation, Saved Lists toolbar (`renderSavedListsToolbar`), Bulk Cart Manifest Exporter, Sidebar Portfolio aggregator, and Card Rollover preview controller.
-* `popup.html` & `popup.js` — Toolbar utility popup displaying site-specific extracted metrics (`metrics-schema.js`) with explicit `"Migrate Dataset"` and `"Open Full Dashboard"` triggers.
-* `content.src.js` / `content.js` — Marketplace DOM parser (aggressive eBay title regex sanitizer stripping `MTG`, `NM`, `LP`, `Foil`, and `[SET - #]` noise before sending `fetchComps` to `background.js`).
-* `background.js` — Service worker handling `fetchComps` (Scryfall fuzzy lookup + pricing extraction), cross-tab message routing, and `chrome.storage.local` persistence.
-* `PROJECT_BIBLE.md` & `docs/PROJECT_BIBLE.md` — Master consolidated documentation file.
+### Core Files (shipped in the release zip)
+* `manifest.json` - MV3. Permissions `storage`, `activeTab`, `alarms`, `scripting`; host permissions for eBay, TCGplayer, Fanatics, Goldin, Cardmarket, MTGDecks, MTGGoldfish, magic.gg, wizards.com, MTGScavenger, `api.scryfall.com`, `api.gumroad.com`. No `default_popup`: the toolbar icon opens the dashboard tab (`chrome.action.onClicked`).
+* `background.js` - service worker: `fetchComps` (single-card Scryfall fuzzy lookup, accepts `foil`), `fetchCollectionPrices` (75-card batches, writes `scryfallPriceCache`), `verifyDetectedCandidates` / `importDetectedToScout` (auto-detector), `openDashboard`.
+* `content.js` (built from `content.src.js` - edit the `.src.js`, then `cp`/run the build) - eBay listing badge.
+* `auto-detector.js` - decklist/card detector + eBay/Whatnot snipe bar on TCG sites and MTGScavenger.
+* `affiliate.js` - click-time affiliate decoration (EPN campaign `5339224696`, Impact account `9019865` / TCGplayer program `21018`). `impactTrackingBase` must be pasted from Impact (Create Tracking Link) before TCGplayer links are tagged. Users can opt out in Settings (`affiliateEnabled`).
+* `dashboard.html` / `dashboard.js` - full-tab workspace, Settings (license + affiliate disclosure), sidebar portfolio, card rollover.
+* `content.css`, icons (`icon16/48/128.png`), `mpsbanner1mb.png` (watermark).
+* Not shipped / unused while there is no popup: `popup.html`, `popup.js`, `popup.css`, `metrics-schema.js`, `mtgdecks-scraper.js`, `dashboard.css`.
 
-### `chrome.storage.local` Keys
-* `savedDecks` / `chaseLists` — Array of saved deck objects `{ name, cards: [{ cardName, required, acquired, unitPrice, tixPrice, basisSpent }] }`.
-* `currentDecklist` — Currently active deck array in the workspace.
-* `watchlist_cards` — Single cards migrated from MTGGoldfish/TCGplayer/eBay via the popup or content badge.
-* `card_chase` — Active auction/BIN targets migrated from marketplaces.
+### `chrome.storage.local` keys (actual)
+* `procurementTargets` - active Chase Hunt sheet: `[{ cardName, quantity, acquired, basis }]`
+* `currentDecklist`, `deckMeta` - last compiled deck and its name/printing/condition filters
+* `savedChaseLists` - saved library: `{ [deckName]: { cards, meta, updatedAt } }`
+* `watchlist` - bookmarked listings: `{ title, price, marketFloor, foil, url, bidders, watchers, timeLeft, savedAt }` (deduped by origin+path URL)
+* `scryfallPriceCache` - `{ lowercaseName: { name, usd, usd_foil, tix } }` written by `fetchCollectionPrices`
+* `scryfallCatalogNames`, `scryfallCatalogUpdatedAt` - card-name catalog for the auto-detector (7-day cache)
+* `scoutArmed` - auto-detect on/off; `affiliateEnabled` - affiliate links on/off (default on)
+* `licenseKey`, `licenseValid`, `licenseVerifiedAt` - Gumroad license state
 
 ---
 
@@ -100,3 +111,17 @@ Columns:
 2. **eBay Title Sanitization for Scryfall API:** Do not rely solely on `.ux-labels-values__labels` DOM nodes on eBay, as sellers frequently omit Item Specifics. Always run the aggressive regex sanitizer on the listing title to strip condition prefixes (`NM`, `LP`) and bracketed collector numbers before calling `fetchComps`.
 3. **Tab Self-Targeting Loop:** When `dashboard.html` is open as the active tab, calling `chrome.tabs.query({ active: true, currentWindow: true })` targets the dashboard itself instead of the MTGDecks/Goldfish tab. Always query specific target URLs (`*://*.mtgdecks.net/*`, `*://*.mtggoldfish.com/*`, `*://*.ebay.com/*`) or filter out `chrome-extension://` URLs.
 4. **Scryfall 404s on Arena Decklist Paste:** Pasting Arena-formatted lines like `1 Kiora of Salt and Sand (FRA) 273` must pass through `cleanCardName()` to strip `(SET) ###` before hitting Scryfall, with an `onerror` SVG fallback for custom sets.
+5. **Infinite MutationObserver loop (fixed 1.3.x):** `renderSidebarPortfolio` rewrote its own DOM on every mutation. It now compares a signature first and the observer is debounced.
+6. **Inline handlers blocked by MV3 CSP (fixed 1.3.x):** `onclick`/`onerror` in template strings never ran (visual deck tiles, art thumbnails). Wired via listeners instead.
+7. **Release build truncated `background.js` (fixed 1.3.x):** see guardrail 6.
+8. **Sidebar read the wrong storage key (fixed 1.3.x):** saved decks live in `savedChaseLists`, not `savedDecks`/`chaseLists`.
+9. **Invented prices (fixed 1.3.x):** `$3.50` / `$4.25` fallbacks removed; unknown prices show `-` or `~`.
+10. **Paste box hidden in Visual Grid mode (fixed 1.3.1):** the Text List textarea is hidden while Visual Grid is active, so pasting did nothing. `setDeckView()` now switches modes; the empty grid has a "Paste a decklist" button, and pasting a decklist anywhere on the Chase Hunt tab loads it.
+11. **eBay badge (fixed 1.2.x):** shipping read only from shipping nodes; non-USD prices produce no verdict; foil detected from title/Finish; Scryfall `0.00` is treated as "no price".
+
+## 6. OPEN ITEMS / NOT YET WIRED
+* Impact `impactTrackingBase` (needs the Ad ID from the Impact dashboard).
+* Gumroad `GUMROAD_PRODUCT_ID` if the verify API reports that a product id is required.
+* Meta Analytics data is hardcoded sample data (no live source yet).
+* `content.js` badge only understands eBay's page structure; it does nothing on TCGplayer / Fanatics / Goldin / Cardmarket.
+* Live-site selectors (eBay, MTGDecks, MTGGoldfish, Wizards, MTGScavenger) have not been re-verified by automated tests.

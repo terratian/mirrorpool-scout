@@ -13,3 +13,8 @@ node_modules/
 dist/
 *.pem
 *.crx
+
+# Build output & scratch
+dist/
+*.zip
+*.patch

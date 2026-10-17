@@ -1,86 +1,69 @@
 #!/bin/bash
-set -e
+# Mirror Pool Scout - release packager.
+# Ships readable code (the Chrome Web Store rejects obfuscated JS). Optional minify via terser, which is safe
+# (a real parser, unlike regex comment stripping that broke background.js on the " // " card-name string).
+set -euo pipefail
+cd "$(dirname "$0")"
 
-echo "🔒 [Mirror Pool Scout] Starting Obfuscation & Launch Packaging Pipeline..."
+echo "🔮 Building Mirror Pool Scout release..."
 
-# Check if javascript-obfuscator or terser is available via npx, otherwise use built-in Python AST/Identifier Obfuscator
-if command -v npx >/dev/null 2>&1 && npx --no-install javascript-obfuscator --version >/dev/null 2>&1; then
-    OBF_MODE="node"
-    echo "⚡ Using javascript-obfuscator engine..."
-else
-    OBF_MODE="python"
-    echo "🐍 Using built-in Python String-Hex & Whitespace Obfuscation engine..."
+# content.js is generated from content.src.js (single source of truth)
+[ -f content.src.js ] && cp content.src.js content.js
+
+rm -rf dist && mkdir -p dist
+
+# Collect exactly what manifest.json + dashboard.html reference, so nothing is missed or shipped by accident.
+python3 - <<'PY'
+import json, re, shutil, os, sys
+m = json.load(open("manifest.json"))
+files = {"manifest.json", m["background"]["service_worker"], "dashboard.html"}
+for cs in m.get("content_scripts", []):
+    files.update(cs.get("js", [])); files.update(cs.get("css", []))
+files.update(m.get("icons", {}).values())
+files.update(m.get("action", {}).get("default_icon", {}).values())
+if m.get("action", {}).get("default_popup"): files.add(m["action"]["default_popup"])
+html = open("dashboard.html", encoding="utf-8").read()
+files.update(re.findall(r'(?:src|href)="([^"#:]+\.(?:js|css|png|svg))"', html))
+for js in ("dashboard.js", "auto-detector.js", "content.js"):
+    if os.path.exists(js):
+        files.update(re.findall(r'["\']([\w\-]+\.(?:png|svg))["\']', open(js, encoding="utf-8").read()))
+missing = sorted(f for f in files if not os.path.exists(f))
+if missing:
+    sys.exit("❌ Referenced but missing: " + ", ".join(missing))
+for f in sorted(files):
+    shutil.copy(f, "dist/" + f)
+print("  files:", ", ".join(sorted(files)))
+PY
+
+# Customer-facing install note (sideload)
+VER=$(python3 -c 'import json;print(json.load(open("manifest.json"))["version"])')
+cat > dist/INSTALL.txt <<TXT
+Mirror Pool Scout v${VER} - install (Chrome / Chromium / Edge / Brave)
+
+1. Unzip this folder somewhere permanent (Chrome loads it from disk; do not delete it afterwards).
+2. Open chrome://extensions and turn on "Developer mode" (top right).
+3. Click "Load unpacked" and choose the unzipped folder.
+4. Pin the extension, then click its icon to open the dashboard.
+
+License: open the dashboard > Settings & API, paste your Gumroad license key, press the button.
+Updates: download the new zip, unzip over the old folder, then press reload on chrome://extensions.
+
+Disclosure: some eBay / TCGplayer links are affiliate links (eBay Partner Network, Impact). They are only
+tagged when you click them, cost you nothing, and can be switched off in Settings.
+Support: https://mrjoshua.gumroad.com/l/mirrorpoolscout
+TXT
+
+# Syntax-check everything we ship
+for f in dist/*.js; do node --check "$f"; done
+
+# Optional: safe minification
+if [ "${MINIFY:-0}" = "1" ] && command -v npx >/dev/null 2>&1; then
+    for f in dist/*.js; do npx --yes terser "$f" --compress --mangle -o "$f"; done
+    for f in dist/*.js; do node --check "$f"; done
 fi
 
-python3 -c '
-import glob, os, re, base64
-
-src_files = {
-    ".src/dashboard.src.js": "dashboard.js",
-    ".src/background.src.js": "background.js",
-    ".src/content.src.js": "content.js",
-    ".src/popup.src.js": "popup.js",
-    ".src/metrics-schema.src.js": "metrics-schema.js"
-}
-
-def minify_and_obfuscate(js_code):
-    # 1. Strip single-line and multi-line comments safely (avoiding URLs like https://)
-    lines = js_code.split("\n")
-    cleaned_lines = []
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("//"):
-            continue
-        # Remove trailing comments not preceded by : or " or '\''
-        line = re.sub(r"(?<![:\"\x27])//.*$", "", line)
-        if line.strip():
-            cleaned_lines.append(line.strip())
-    compact = "\n".join(cleaned_lines)
-    compact = re.sub(r"/\*.*?\*/", "", compact, flags=re.DOTALL)
-
-    # 2. Obfuscate sensitive string literals (storage keys, Gumroad/license checks, action names) into hex escapes
-    sensitive_tokens = [
-        "savedDecks", "chaseLists", "currentDecklist", "watchlist_cards",
-        "card_chase", "fetchComps", "sync_to_dashboard", "extract_deck",
-        "acquisitionState", "licenseKey", "isProUnlocked"
-    ]
-    for token in sensitive_tokens:
-        hex_encoded = "".join([f"\\x{ord(c):02x}" for c in token])
-        compact = compact.replace(f"\"{token}\"", f"\"{hex_encoded}\"")
-        compact = compact.replace(f"\x27{token}\x27", f"\x27{hex_encoded}\x27")
-
-    # 3. Collapse redundant whitespace
-    compact = re.sub(r"\n+", "\n", compact)
-    return f"/* Mirror Pool Scout v1.2 - Proprietary Build - All Rights Reserved */\n{compact}\n"
-
-for src, dest in src_files.items():
-    if os.path.exists(src):
-        with open(src, "r", encoding="utf-8") as f:
-            raw = f.read()
-        obf = minify_and_obfuscate(raw)
-        with open(dest, "w", encoding="utf-8") as f:
-            f.write(obf)
-        print(f"  ✔ Compiled & obfuscated: {src} -> {dest}")
-'
-
-# 6. Package Launch-Ready ZIP Archives into dist/
-mkdir -p dist
-rm -f dist/mirrorpool-scout-gumroad-alpha.zip
-
-python3 -c '
-import zipfile, os
-
-include_files = [
-    "manifest.json", "dashboard.html", "dashboard.js", "dashboard.css",
-    "background.js", "content.js", "content.css", "popup.html", "popup.js",
-    "metrics-schema.js", "icon16.png", "icon48.png", "icon128.png", "favicon.svg"
-]
-
-with zipfile.ZipFile("dist/mirrorpool-scout-gumroad-alpha.zip", "w", zipfile.ZIP_DEFLATED) as zf:
-    for f in include_files:
-        if os.path.exists(f):
-            zf.write(f)
-
-print("📦 Created launch archive: dist/mirrorpool-scout-gumroad-alpha.zip")
-'
-echo "✅ Pipeline Complete! Root files are obfuscated and ready for public Git push or Chrome reload."
+VERSION=$(python3 -c 'import json;print(json.load(open("manifest.json"))["version"])')
+OUT="mirrorpool-scout-v${VERSION}.zip"
+rm -f "$OUT"
+(cd dist && zip -qr "../$OUT" .)
+echo "✅ $OUT ($(du -h "$OUT" | cut -f1)). Sideload: unzip, then chrome://extensions > Load unpacked."
