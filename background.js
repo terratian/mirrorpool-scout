@@ -160,8 +160,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 // Respect Scryfall rate limit (100ms between requests)
                 await new Promise(r => setTimeout(r, 100));
             }
-            chrome.storage.local.set({ scryfallPriceCache: priceMap }, () => {
-                sendResponse({ status: "success", prices: priceMap });
+            // Merge into the cache (never replace it) so My Decks can price every saved list, not just the last one fetched.
+            chrome.storage.local.get({ scryfallPriceCache: {} }, (old) => {
+                const merged = Object.assign({}, old.scryfallPriceCache || {}, priceMap);
+                chrome.storage.local.set({ scryfallPriceCache: merged }, () => {
+                    sendResponse({ status: "success", prices: priceMap });
+                });
             });
         })();
         return true;

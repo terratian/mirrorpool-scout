@@ -1,7 +1,7 @@
 # MIRROR POOL™ SCOUT — MASTER PROJECT BIBLE & AI CONTEXT REGISTRY
 **Last Updated:** October 17, 2026
 **Repository:** `github.com:terratian/mirrorpool-scout.git` (`~/mirrorpoolbeta/mirrorpool-scout`)
-**Current Version:** 1.3.1 (Standalone Alpha Build)
+**Current Version:** 1.4.0 (Standalone Alpha Build)
 **Developer:** Joshua Sultan (Solo Developer)
 **Distribution & Licensing:** $9 Lifetime Early-Access License via Gumroad (`https://mrjoshua.gumroad.com/l/mirrorpoolscout`; keys are verified against Gumroad's `licenses/verify` API from Settings; manual `.zip` sideload; removes Alpha watermark and unlocks bulk manifest optimization). Future recurring tier ($9.99/mo) planned for Mirror Pool Suite.
 
@@ -116,7 +116,7 @@ Columns:
 7. **Release build truncated `background.js` (fixed 1.3.x):** see guardrail 6.
 8. **Sidebar read the wrong storage key (fixed 1.3.x):** saved decks live in `savedChaseLists`, not `savedDecks`/`chaseLists`.
 9. **Invented prices (fixed 1.3.x):** `$3.50` / `$4.25` fallbacks removed; unknown prices show `-` or `~`.
-10. **Paste box hidden in Visual Grid mode (fixed 1.3.1):** the Text List textarea is hidden while Visual Grid is active, so pasting did nothing. `setDeckView()` now switches modes; the empty grid has a "Paste a decklist" button, and pasting a decklist anywhere on the Chase Hunt tab loads it.
+10. **Paste box hidden in Visual Grid mode (fixed 1.4.0):** the Text List textarea is hidden while Visual Grid is active, so pasting did nothing. `setDeckView()` now switches modes; the empty grid has a "Paste a decklist" button, and pasting a decklist anywhere on the Chase Hunt tab loads it.
 11. **eBay badge (fixed 1.2.x):** shipping read only from shipping nodes; non-USD prices produce no verdict; foil detected from title/Finish; Scryfall `0.00` is treated as "no price".
 
 ## 6. OPEN ITEMS / NOT YET WIRED
@@ -125,3 +125,10 @@ Columns:
 * Meta Analytics data is hardcoded sample data (no live source yet).
 * `content.js` badge only understands eBay's page structure; it does nothing on TCGplayer / Fanatics / Goldin / Cardmarket.
 * Live-site selectors (eBay, MTGDecks, MTGGoldfish, Wizards, MTGScavenger) have not been re-verified by automated tests.
+
+
+## v1.4.0 additions
+- `features.js` (loaded after dashboard.js): Chase Hunt totals bar (paper market, paper BIN target <=85%, TIX total, TIX BIN target <=85%), "Scan open market for undervalued paper" (Scryfall all-printings; flags cheapest printing >=12% below default price or >=5% dip vs baseline; eBay BIN link under 90% of cheapest printing), My Decks menu (load/copy/rename/delete from `savedChaseLists`), Bookmarks menu (`mpBookmarks`, migrated once from `watchlist`; eBay badge bookmark button writes to both).
+- Rule: never render injected UI as a `<table>` inside #tab-procurement; the legacy name enhancer and sidebar scraper treat any table cell as a deck row.
+- `background.js` merges into `scryfallPriceCache` instead of replacing it.
+- Not wired: live eBay listing prices (needs eBay API keys); the scan uses Scryfall market data plus eBay search links.

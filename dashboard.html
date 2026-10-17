@@ -645,6 +645,8 @@ table tbody td {
         <a class="nav-item" data-tab="tab-procurement">Chase Hunt</a>
         <a class="nav-item" data-tab="tab-arbitrage">Arbitrage Desk</a>
         <a class="nav-item" data-tab="tab-meta">Meta Analytics</a>
+        <a class="nav-item" data-tab="tab-mydecks">📂 My Decks</a>
+        <a class="nav-item" data-tab="tab-bookmarks">★ Bookmarks</a>
         <!-- MP_PORTFOLIO_START -->
         <div id="mp-saved-decks-sidebar">
             <div class="mp-sidebar-header">
@@ -669,7 +671,7 @@ table tbody td {
         <a class="nav-item" data-tab="tab-settings">Settings & API</a>
         <div class="sidebar-footer">
             <div>Suite Connection: <strong>Standalone Mode</strong></div>
-            <div style="margin-top:4px; font-size:10px; color:#10b981;">Alpha Build v1.3</div>
+            <div style="margin-top:4px; font-size:10px; color:#10b981;">Alpha Build v1.4</div>
             <div style="margin-top:4px; font-size:10px; color:#94a3b8;">Some links are affiliate links. See Settings.</div>
         </div>
     </div>
@@ -722,9 +724,9 @@ table tbody td {
                         <thead>
                             <tr>
                                 <th>Card Target</th>
-                                <th>Required</th>
-                                <th>Acquired</th>
-                                <th>Market Floor</th>
+                                <th>Have / Need</th>
+                                <th>Paper (Mkt)</th>
+                                <th>MTGO TIX</th>
                                 <th>Basis Spent</th>
                                 <th>Marketplaces & Comps</th>
                                 <th>Actions</th>
@@ -776,6 +778,18 @@ table tbody td {
             <div id="meta-tracker-grid" class="grid-container"></div>
         </div>
 
+        <!-- 4b. My Decks (persistent saved decks) -->
+        <div id="tab-mydecks" class="tab-panel">
+            <div class="page-title">My Decks</div>
+            <div id="mp-mydecks-body"></div>
+        </div>
+
+        <!-- 4c. Bookmarks (persistent) -->
+        <div id="tab-bookmarks" class="tab-panel">
+            <div class="page-title">Bookmarks</div>
+            <div id="mp-bookmarks-body"></div>
+        </div>
+
         <!-- 5. Settings -->
         <div id="tab-settings" class="tab-panel">
             <div class="page-title">Settings & Engine Configuration</div>
@@ -789,6 +803,7 @@ table tbody td {
 
     <script src="affiliate.js"></script>
     <script src="dashboard.js"></script>
+    <script src="features.js"></script>
 <!-- MP_OVERLAY_START -->
 <div id="mp-card-hover-overlay">
     <img id="mp-hover-card-img" src="" alt="Card Preview" />

@@ -235,9 +235,13 @@ function extractBestEbayCardName(rawTitle) {
                 savedAt: Date.now()
             };
 
-            chrome.storage.local.get({ watchlist: [] }, (res) => {
+            chrome.storage.local.get({ watchlist: [], mpBookmarks: [] }, (res) => {
                 const updated = [cardRecord, ...res.watchlist.filter(x => x.url !== cardRecord.url)];
-                chrome.storage.local.set({ watchlist: updated }, () => {
+                // Also keep a persistent copy for the dashboard's Bookmarks menu (survives "Drop" in the Watchlist).
+                const bm = Array.isArray(res.mpBookmarks) ? res.mpBookmarks : [];
+                const bmNext = [{ id: "bm" + Date.now(), title: cardRecord.title, url: cardRecord.url, price: cardRecord.price, source: "eBay", note: "", savedAt: cardRecord.savedAt }]
+                    .concat(bm.filter(x => x.url !== cardRecord.url));
+                chrome.storage.local.set({ watchlist: updated, mpBookmarks: bmNext }, () => {
                     saveBtn.innerText = "✓ Bookmarked";
                     saveBtn.style.borderColor = "#10b981";
                     saveBtn.style.color = "#10b981";

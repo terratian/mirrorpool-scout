@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // 1. Sidebar Tab Switching
 function initTabNavigation() {
-    const panels = ["tab-watchlist", "tab-procurement", "tab-arbitrage", "tab-meta", "tab-settings"];
+    const panels = ["tab-watchlist", "tab-procurement", "tab-arbitrage", "tab-meta", "tab-mydecks", "tab-bookmarks", "tab-settings"];
     const navItems = document.querySelectorAll(".sidebar .nav-item, .nav-item, [data-tab], [data-target]");
 
     navItems.forEach((item) => {
@@ -569,6 +569,8 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
             if (currentSortMode === "name-asc") return a.cardName.localeCompare(b.cardName);
             return 0;
         });
+
+        if (window.MPFeatures) window.MPFeatures.renderTotals(enrichedTargets);
 
         if (tbody) {
             tbody.innerHTML = enrichedTargets.map((item) => {
