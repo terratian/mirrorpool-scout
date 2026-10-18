@@ -1068,8 +1068,8 @@ function applyWatermarkState(isLicensed) {
     if (!wm && !document.querySelector(".watermark, .watermark-overlay")) {
         wm = document.createElement("div");
         wm.id = "mp-watermark";
-        wm.style.cssText = "position:fixed; inset:0; pointer-events:none; z-index:0; display:flex; align-items:center; justify-content:center; opacity:0.08;";
-        wm.innerHTML = `<img src="mpsbanner1mb.png" style="width:420px; max-width:60vw; filter:grayscale(20%);" alt="">`;
+        wm.style.cssText = "position:fixed; inset:0; pointer-events:none; z-index:0; display:flex; align-items:center; justify-content:center; opacity:0.16;";
+        wm.innerHTML = `<img src="mpsbanner1mb.png" style="width:560px; max-width:70vw; filter:grayscale(10%);" alt="">`;
         document.body.appendChild(wm);
     }
     if (wm) wm.style.display = isLicensed ? "none" : "flex";
@@ -1078,9 +1078,15 @@ function applyWatermarkState(isLicensed) {
     if (!banner && !document.querySelector(".support-banner")) {
         banner = document.createElement("div");
         banner.id = "mp-support-banner";
-        banner.style.cssText = "position:fixed; bottom:0; left:0; right:0; z-index:999; background:rgba(3,7,18,0.95); border-top:1px solid #1e293b; padding:8px 16px; text-align:center; font-size:12px; color:#cbd5e1;";
-        banner.innerHTML = `<strong>Alpha Build:</strong> Feel free to use the app! Snag a <a href="#" id="banner-key-link" style="color:#10b981; font-weight:700; text-decoration:underline;">$9 Lifetime Key</a> to remove the watermark and support an out-of-work solo developer building rad tools for all your TCG needs.`;
+        banner.style.cssText = "position:fixed; bottom:0; left:0; right:0; z-index:999; background:linear-gradient(90deg,#052e2b,#0b1120 40%,#1e1b4b); border-top:2px solid #10b981; padding:10px 16px; text-align:center; font-size:13px; line-height:1.5; color:#e2e8f0; box-shadow:0 -6px 24px rgba(0,0,0,.45);";
+        banner.innerHTML = `<div id="mp-banner-full"><strong style="color:#4ade80;">I'm a disabled MTG player, building this since Alpha for players like me.</strong> $9 goes a long way, and I hope you stick around for the full suite coming soon. Until then you get the full power of this extension free. The watermark is just a reminder of the effort and resources behind this tool for your chase. <a href="https://mrjoshua.gumroad.com/l/mirrorpoolscout" target="_blank" rel="noopener" style="color:#10b981; font-weight:800; text-decoration:underline;">Get the $9 Lifetime Key</a> &middot; <a href="#" id="banner-key-link" style="color:#93c5fd; text-decoration:underline;">I already have a key</a> &middot; <a href="#" id="banner-min-link" style="color:#94a3b8; text-decoration:underline;">Shrink</a></div><div id="mp-banner-mini" style="display:none;"><strong style="color:#4ade80;">Mirror Pool Scout, free alpha.</strong> A solo disabled-player build. <a href="https://mrjoshua.gumroad.com/l/mirrorpoolscout" target="_blank" rel="noopener" style="color:#10b981; font-weight:800; text-decoration:underline;">$9 Lifetime Key</a> &middot; <a href="#" id="banner-max-link" style="color:#94a3b8; text-decoration:underline;">Read more</a></div>`;
+        const reserve = () => { document.body.style.paddingBottom = (banner.offsetHeight + 8) + "px"; };
         document.body.appendChild(banner);
+        const full = banner.querySelector("#mp-banner-full"), mini = banner.querySelector("#mp-banner-mini");
+        const setMini = (m) => { full.style.display = m ? "none" : ""; mini.style.display = m ? "" : "none"; try { sessionStorage.setItem("mpBannerMini", m ? "1" : ""); } catch (e) {} reserve(); };
+        banner.querySelector("#banner-min-link").addEventListener("click", (e) => { e.preventDefault(); setMini(true); });
+        banner.querySelector("#banner-max-link").addEventListener("click", (e) => { e.preventDefault(); setMini(false); });
+        try { setMini(sessionStorage.getItem("mpBannerMini") === "1"); } catch (e) { setMini(false); }
         const link = banner.querySelector("#banner-key-link");
         if (link) {
             link.addEventListener("click", (e) => {
@@ -1089,7 +1095,7 @@ function applyWatermarkState(isLicensed) {
             });
         }
     }
-    if (banner) banner.style.display = isLicensed ? "none" : "block";
+    if (banner) { banner.style.display = isLicensed ? "none" : "block"; document.body.style.paddingBottom = isLicensed ? "" : (banner.offsetHeight + 8) + "px"; }
 }
 
 function initSettingsPanel() {
