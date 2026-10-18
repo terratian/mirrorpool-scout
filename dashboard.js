@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // 1. Sidebar Tab Switching
 function initTabNavigation() {
-    const panels = ["tab-watchlist", "tab-procurement", "tab-arbitrage", "tab-meta", "tab-mydecks", "tab-bookmarks", "tab-settings"];
+    const panels = ["tab-watchlist", "tab-procurement", "tab-arbitrage", "tab-meta", "tab-mydecks", "tab-collection", "tab-bookmarks", "tab-settings"];
     const navItems = document.querySelectorAll(".sidebar .nav-item, .nav-item, [data-tab], [data-target]");
 
     navItems.forEach((item) => {
@@ -142,10 +142,24 @@ function initTabNavigation() {
 }
 
 // 2. Sync & Render All Storage Buckets
+// How many copies of a card the user already owns (from the imported collection), 0 when the toggle is off.
+function ownedQty(name) {
+    if (!window.mpUseCollection || !window.mpCollectionCards) return 0;
+    const key = String(name || "").toLowerCase().trim();
+    const c = window.mpCollectionCards;
+    const hit = c[key] || c[key.split(" // ")[0]];
+    return hit ? (hit.q || 0) : 0;
+}
+
 function syncAllPanels() {
     chrome.storage.local.get(
-        ["watchlist", "watchlist_cards", "card_chase", "procurementTargets", "currentDecklist", "deckMeta", "savedChaseLists", "priceBaselineMap"],
+        ["watchlist", "watchlist_cards", "card_chase", "procurementTargets", "currentDecklist", "deckMeta", "savedChaseLists", "priceBaselineMap", "mpCollection", "useCollection", "hideOwned", "mpShipSettings"],
         (res) => {
+            const sh = res.mpShipSettings || {};
+            window.mpShip = { ship: isFinite(parseFloat(sh.ship)) ? parseFloat(sh.ship) : 0.78, perOrder: Math.max(1, parseInt(sh.perOrder, 10) || 1) };
+            window.mpCollectionCards = (res.mpCollection && res.mpCollection.cards) || {};
+            window.mpUseCollection = res.useCollection === true;
+            window.mpHideOwned = res.hideOwned === true;
             const combinedWatchlist = [
                 ...(Array.isArray(res.watchlist) ? res.watchlist : []),
                 ...(Array.isArray(res.watchlist_cards) ? res.watchlist_cards : []),
@@ -402,48 +416,33 @@ function initChaseHuntControls() {
     }
 
     if (scrapeDeckBtn) {
+        const DECK_URLS = ["*://*.mtggoldfish.com/*", "*://*.mtgdecks.net/*", "*://*.moxfield.com/*", "*://*.archidekt.com/*", "*://*.tappedout.net/*",
+            "*://*.deckstats.net/*", "*://scryfall.com/*", "*://*.mtgtop8.com/*", "*://*.edhrec.com/*", "*://*.aetherhub.com/*", "*://*.magic.gg/*", "*://*.wizards.com/*"];
         scrapeDeckBtn.addEventListener("click", () => {
             const origText = scrapeDeckBtn.innerText;
-            scrapeDeckBtn.innerText = "⏳ Scanning Open Tabs...";
-
-            chrome.tabs.query({ url: ["*://*.mtgdecks.net/*", "*://*.mtggoldfish.com/*", "*://*.magic.gg/*", "*://*.wizards.com/*"] }, (tabs) => {
-                if (!tabs || tabs.length === 0) {
-                    alert("No open MTGDecks, MTGGoldfish, or Magic.gg tab detected.");
-                    scrapeDeckBtn.innerText = origText;
-                    return;
+            scrapeDeckBtn.innerText = "⏳ Looking for a deck…";
+            const finish = (msg) => { scrapeDeckBtn.innerText = origText; if (msg) alert(msg); };
+            chrome.tabs.query({ url: DECK_URLS }, async (tabs) => {
+                if (chrome.runtime.lastError || !tabs || tabs.length === 0) {
+                    return finish("No deck page is open. Open a deck on MTGGoldfish, MTGDecks, Moxfield, Archidekt, TappedOut, Deckstats, Scryfall, MTGTop8, EDHREC or AetherHub, then try again.");
                 }
-
-                const targetTab = tabs[0];
-                chrome.scripting.executeScript({
-                    target: { tabId: targetTab.id },
-                    func: () => {
-                        const cards = [];
-                        const primaryTable = document.querySelector("#tab-paper table.deck-view-deck-table, table.deck-view-deck-table") || document;
-                        primaryTable.querySelectorAll("tr").forEach(tr => {
-                            if (tr.classList.contains("deck-category-header") || tr.querySelector("th")) return;
-                            const link = tr.querySelector("a[href*='/price/'], td.deck-col-card a, a.card_id, .td-card a");
-                            const qtyTd = tr.querySelector("td.deck-col-qty, .td-qty, td:first-child");
-                            if (link && qtyTd) {
-                                const qMatch = qtyTd.innerText.trim().match(/^(\d{1,2})\b/);
-                                const name = link.innerText.trim();
-                                if (qMatch && name) cards.push(`${qMatch[1]} ${name}`);
-                            }
-                        });
-                        const h1 = document.querySelector("h1.deck-view-title, h1");
-                        const title = h1 ? (h1.childNodes[0]?.textContent?.trim() || h1.innerText.split("\n")[0].trim()) : document.title.split("|")[0].trim();
-                        return { title, lines: cards };
-                    }
-                }, (results) => {
-                    scrapeDeckBtn.innerText = origText;
-                    if (chrome.runtime.lastError || !results || !results[0]?.result?.lines?.length) {
-                        alert("Could not automatically parse rows on that tab.");
-                        return;
-                    }
-                    const { title, lines } = results[0].result;
-                    if (deckNameInput && title) deckNameInput.value = title;
-                    if (decklistInput) decklistInput.value = lines.join("\n");
-                    if (saveDeckBtn) saveDeckBtn.click();
-                });
+                tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+                for (const tab of tabs.slice(0, 6)) {
+                    try {
+                        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["listformats.js", "deckextract.js"] });
+                        const res = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => window.MPDeck.extract() });
+                        const r = res && res[0] && res[0].result;
+                        if (r && r.ok) {
+                            if (deckNameInput && r.title) deckNameInput.value = r.title;
+                            if (decklistInput) { decklistInput.value = r.text; decklistInput.dispatchEvent(new Event("input", { bubbles: true })); }
+                            scrapeDeckBtn.innerText = `✓ Read ${r.count} cards from ${r.source}`;
+                            setTimeout(() => { scrapeDeckBtn.innerText = origText; }, 2500);
+                            if (saveDeckBtn) saveDeckBtn.click();
+                            return;
+                        }
+                    } catch (e) { /* tab not scriptable (e.g. still loading): try the next one */ }
+                }
+                finish("Found open deck sites, but none of the tabs showed a decklist. Open the deck itself (not a search page) and try again.");
             });
         });
     }
@@ -459,7 +458,7 @@ function initChaseHuntControls() {
                 const fmtSel = document.getElementById("mp-export-format");
                 const onlyNeeded = !document.getElementById("mp-export-needed") || document.getElementById("mp-export-needed").checked;
                 const rows = list.map(c => ({ cardName: c.cardName, set: c.set, cn: c.cn, foil: c.foil,
-                    qty: onlyNeeded ? Math.max(0, (c.quantity || 1) - (c.acquired || 0)) : (c.quantity || 1) }));
+                    qty: onlyNeeded ? Math.max(0, (c.quantity || 1) - (c.acquired || 0) - ownedQty(c.cardName)) : (c.quantity || 1) }));
                 const manifestText = MPLists.format(rows, fmtSel ? fmtSel.value : "plain");
                 if (!manifestText.trim() || rows.every(r => r.qty <= 0)) { alert("Nothing left to buy on this list."); return; }
 
@@ -515,6 +514,66 @@ function initChaseHuntControls() {
     }
 }
 
+// ---- Price loading: show saved prices instantly, refresh in the background, retry quietly, say what happened ----
+let priceRenderToken = 0, priceRetryTimer = null, priceRetryCount = 0;
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function sendMessageOnce(msg) {
+    return new Promise((resolve) => {
+        try { chrome.runtime.sendMessage(msg, (r) => { resolve(chrome.runtime.lastError ? null : (r || null)); }); }
+        catch (e) { resolve(null); }
+    });
+}
+
+function setPriceStatus(kind, detail) {
+    const el = document.getElementById("mp-price-status");
+    if (!el) return;
+    const t = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    if (kind === "ok") { el.style.color = "#10b981"; el.textContent = `✓ Prices updated ${t} (Scryfall / TCGplayer market)`; el.title = ""; }
+    else if (kind === "partial") { el.style.color = "#f59e0b"; el.textContent = `✓ Updated ${t}. ${detail.length} card name(s) not found: ${detail.slice(0, 3).join(", ")}${detail.length > 3 ? "…" : ""}`; el.title = detail.join(", "); }
+    else if (kind === "stale") { el.style.color = "#f59e0b"; el.innerHTML = `⚠ Couldn't reach Scryfall, showing saved prices. <a href="#" id="mp-price-retry" style="color:#38bdf8">Retry now</a>`; el.title = detail || ""; }
+    else { el.style.color = "#94a3b8"; el.textContent = "Loading prices…"; }
+}
+document.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "mp-price-retry") { e.preventDefault(); priceRetryCount = 0; syncAllPanels(); }
+});
+
+async function loadPricesRobust(cardNames, paint) {
+    const names = Array.from(new Set(cardNames.map((n) => String(n).trim()).filter(Boolean)));
+    const store = await new Promise((r) => chrome.storage.local.get({ scryfallPriceCache: {} }, r));
+    const cache = store.scryfallPriceCache || {};
+    const hasCache = names.some((n) => cache[n.toLowerCase()]);
+    paint(hasCache ? cache : {}); // draw right away (saved prices if we have them) so the page never feels empty
+    setPriceStatus("loading");
+
+    let r = null;
+    for (let a = 0; a < 3 && !r; a++) {
+        r = await sendMessageOnce({ action: "fetchCollectionPrices", cardNames: names });
+        if (!r) await delay(500 * (a + 1)); // no answer: the service worker may still be waking up
+    }
+    if (!r) {
+        // Background didn't answer: ask Scryfall directly from this page.
+        try {
+            const d = await MPScry.fetchPrices(names);
+            r = { prices: d.prices, missing: d.missing, error: d.error };
+            if (Object.keys(d.prices).length) chrome.storage.local.set({ scryfallPriceCache: Object.assign({}, cache, d.prices) });
+        } catch (e) { r = { prices: {}, missing: names, error: String(e) }; }
+    }
+    const fresh = (r && r.prices) || {};
+    const got = Object.keys(fresh).length > 0;
+    paint(Object.assign({}, cache, fresh));
+    if (!got) {
+        setPriceStatus(hasCache ? "stale" : "stale", r && r.error);
+    } else if (r.missing && r.missing.length) setPriceStatus("partial", r.missing);
+    else setPriceStatus("ok");
+
+    clearTimeout(priceRetryTimer);
+    if ((!got || (r.missing && r.missing.length && priceRetryCount < 1)) && priceRetryCount < 3) {
+        priceRetryCount++;
+        priceRetryTimer = setTimeout(syncAllPanels, [5000, 15000, 45000][priceRetryCount - 1]);
+    } else if (got) priceRetryCount = 0;
+}
+
 // 6. Fetch Live Scryfall Prices, Sort Buy List Table, Show Prices on Buttons & Run Synergy Trend Algorithm
 function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baselineMap) {
     const tbody = document.getElementById("procurement-tbody");
@@ -538,8 +597,10 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
         return;
     }
 
-    chrome.runtime.sendMessage({ action: "fetchCollectionPrices", cardNames }, (response) => {
-        const priceMap = (response && response.prices) ? response.prices : {};
+    const token = ++priceRenderToken;
+    const paint = (priceMap) => {
+        if (token !== priceRenderToken) return; // a newer render started; drop this one
+        window.mpPriceMap = priceMap;
         const preferFoil = (document.getElementById("printing-target-select")?.value || deckMeta.printingTarget || "").toLowerCase().includes("foil");
 
         // Update local baseline map to track real price movement over time
@@ -564,7 +625,9 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
             const unitTix = scry.tix || 0;
             const qty = item.quantity || 1;
             const acquired = item.acquired || 0;
-            const remaining = Math.max(0, qty - acquired);
+            const owned = ownedQty(name);
+            const have = Math.min(qty, acquired + owned);
+            const remaining = Math.max(0, qty - have);
 
             totalPaperRemaining += unitPaper * remaining;
             totalMtgoTixRemaining += unitTix * remaining;
@@ -577,7 +640,10 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
             return {
                 ...item,
                 originalIndex,
+                owned,
+                have,
                 unitPaper,
+                eur: scry.eur || 0,
                 unitTix,
                 remaining,
                 deltaPct,
@@ -598,8 +664,11 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
 
         if (window.MPFeatures) window.MPFeatures.renderTotals(enrichedTargets);
 
-        if (tbody) {
-            tbody.innerHTML = enrichedTargets.map((item) => {
+        const shownTargets = window.mpHideOwned ? enrichedTargets.filter(t => t.remaining > 0) : enrichedTargets;
+        if (tbody && window.mpHideOwned && shownTargets.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:16px; color:#10b981;">You already have every card on this list. Nothing to buy.</td></tr>`;
+        } else if (tbody) {
+            tbody.innerHTML = shownTargets.map((item) => {
                 const name = item.cardName || "Unknown Card";
                 const idx = item.originalIndex;
                 const unitPaper = item.unitPaper;
@@ -607,18 +676,44 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
                 const qty = item.quantity || 1;
                 const acquired = item.acquired || 0;
 
-                // Actionable Snipe Ceiling (85% of Scryfall Floor) shown directly on the BIN and Auc buttons!
-                const snipeCeiling = unitPaper > 0 ? Math.max(0.99, unitPaper * 0.85).toFixed(2) : "4.99";
+                // Deal rule: what you pay DELIVERED should be at most 85% of market. Shipping comes out of that budget,
+                // so the item-price cap on eBay is (85% of market) minus this card's share of shipping.
+                const shipCfg = window.mpShip || { ship: 0.78, perOrder: 1 };
+                const shipShare = shipCfg.ship / Math.max(1, shipCfg.perOrder);
+                const dealDelivered = unitPaper > 0 ? unitPaper * 0.85 : 0;
+                const itemCapNum = unitPaper > 0 ? dealDelivered - shipShare : 0;
+                const bundleOnly = unitPaper > 0 && itemCapNum < 0.25;
+                const itemCap = Math.max(0.25, itemCapNum).toFixed(2);
+                const dealTxt = dealDelivered.toFixed(2);
                 const tcgLabel = unitPaper > 0 ? `TCGplayer $${unitPaper.toFixed(2)}` : "TCGplayer Search";
-                const binLabel = unitPaper > 0 ? `eBay BIN ≤$${snipeCeiling}` : "eBay BIN";
-                const aucLabel = unitPaper > 0 ? `eBay Auction ≤$${snipeCeiling}` : "eBay Auction";
+                const binLabel = unitPaper <= 0 ? "eBay Buy It Now" : (bundleOnly ? `eBay free-ship ≤$${dealTxt}` : `eBay BIN ≤$${itemCap} + ship`);
+                const aucLabel = unitPaper <= 0 ? "eBay Auction" : (bundleOnly ? "eBay Auction" : `eBay Auction ≤$${itemCap} + ship`);
+                const binTitle = unitPaper <= 0 ? "Price not loaded yet. Searches eBay Buy It Now without a price cap."
+                    : (bundleOnly
+                        ? `Shipping ($${shipShare.toFixed(2)}) is too big a share of this $${unitPaper.toFixed(2)} card. Shows free-shipping Buy It Now listings up to $${dealTxt} (85% of market), or buy it in a bundle.`
+                        : `Buy It Now items up to $${itemCap}. With ~$${shipShare.toFixed(2)} shipping that is $${dealTxt} delivered, 85% of the $${unitPaper.toFixed(2)} market price.`);
 
-                const minBinFloor = unitPaper >= 8.0 ? Math.max(2.50, unitPaper * 0.40).toFixed(2) : "0.99";
-                const minAucFloor = unitPaper >= 15.0 ? Math.max(1.99, unitPaper * 0.18).toFixed(2) : "0.99";
+                const minBinFloor = unitPaper >= 8.0 ? Math.min(Math.max(2.50, unitPaper * 0.40), Math.max(0.25, itemCapNum * 0.5)).toFixed(2) : "0.25";
+                const minAucFloor = unitPaper >= 15.0 ? Math.min(Math.max(1.99, unitPaper * 0.18), Math.max(0.25, itemCapNum * 0.5)).toFixed(2) : "0.25";
                 const exactQuery = encodeURIComponent(`MTG "${name}" -proxy -proxies -playtest -fanart -alter -alters -altered -custom -placeholder -token -replica`);
                 const tcgUrl = `https://www.tcgplayer.com/search/magic/product?q=${encodeURIComponent(name)}`;
-                const ebayBinUrl = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_BIN=1&_sop=15&_udlo=${minBinFloor}&_udhi=${snipeCeiling}`;
-                const ebayAuctionUrl = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_Auction=1&_sop=1&_udlo=${minAucFloor}&_udhi=${snipeCeiling}`;
+                // mpmax/mpmkt are ignored by eBay; the Scout overlay on the results page reads them to grade each listing delivered.
+                const scoutParams = unitPaper > 0 ? `&mpmax=${dealTxt}&mpmkt=${unitPaper.toFixed(2)}&mpname=${encodeURIComponent(name)}` : "";
+                const priceCap = unitPaper > 0 ? `&_udhi=${bundleOnly ? dealTxt : itemCap}` : "";
+                const ebayBinUrl = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_BIN=1&_sop=15${bundleOnly ? "&LH_FS=1" : ""}${unitPaper > 0 ? `&_udlo=${minBinFloor}` : ""}${priceCap}${scoutParams}`;
+                const ebayAuctionUrl = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_Auction=1&_sop=1${unitPaper > 0 ? `&_udlo=${minAucFloor}` : ""}${unitPaper > 0 ? `&_udhi=${bundleOnly ? dealTxt : itemCap}` : ""}${scoutParams}`;
+                const ebaySoldUrl = `https://www.ebay.com/sch/i.html?_nkw=${exactQuery}&_sacat=19107&LH_Sold=1&LH_Complete=1&_sop=13`;
+                const enc = encodeURIComponent(name);
+                const moreLinks = [
+                    ["📊 eBay sold prices (what it really sells for)", ebaySoldUrl],
+                    ["Card Kingdom", `https://www.cardkingdom.com/catalog/search?search=header&filter%5Bname%5D=${enc}`],
+                    ["Cardmarket (Europe)", `https://www.cardmarket.com/en/Magic/Products/Search?searchString=${enc}`],
+                    ["CoolStuffInc", `https://www.coolstuffinc.com/main_search.php?pa=searchOnName&page=1&resultsPerPage=25&q=${enc}`],
+                    ["Star City Games", `https://starcitygames.com/search/?search_query=${enc}`],
+                    ["Troll and Toad", `https://www.trollandtoad.com/category.php?selected-cat=0&search-words=${enc}`],
+                    ["Cardhoarder (MTGO tickets)", `https://www.cardhoarder.com/cards?data%5Bsearch%5D=${enc}`]
+                ].map(([t, u]) => `<a class="mp-more-link" href="${escapeHtml(u)}" target="_blank" rel="noopener">${escapeHtml(t)}</a>`).join("");
+                const eurNote = item.eur > 0 ? ` · Cardmarket €${item.eur.toFixed(2)}` : "";
 
                 let trendPill = "";
                 if (item.deltaPct >= 5) {
@@ -628,9 +723,9 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
                 }
 
                 return `
-                    <tr style="border-bottom:1px solid #1e293b; font-size:12px;">
-                        <td style="padding:10px; color:#10b981; font-weight:700;">${escapeHtml(name)}${trendPill}</td>
-                        <td style="padding:10px; color:#cbd5e1;">${acquired} / ${qty}</td>
+                    <tr data-card-key="${escapeHtml(name.toLowerCase().trim())}" style="border-bottom:1px solid #1e293b; font-size:12px;">
+                        <td style="padding:10px; color:#10b981; font-weight:700;">${escapeHtml(name)}${trendPill}${bundleOnly ? ` <span class="mp-pill" style="background:rgba(245,158,11,0.15);color:#f59e0b;" title="Shipping would eat more than 30% of this card's price. Buy it in a bundle or on TCGplayer.">📦 ship-heavy</span>` : ""}</td>
+                        <td style="padding:10px; color:#cbd5e1;">${item.have} / ${qty}${item.owned > 0 ? ` <span class="mp-pill b" title="Copies found in your imported collection">${item.owned} owned</span>` : ""}</td>
                         <td style="padding:10px; color:#f59e0b; font-weight:700;">$${unitPaper.toFixed(2)}</td>
                         <td style="padding:10px; color:#38bdf8;">${unitTix.toFixed(2)} TIX</td>
                         <td style="padding:10px; color:#94a3b8;">$${(item.basis || 0).toFixed(2)}</td>
@@ -641,10 +736,18 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
                             </div>
                         </td>
                         <td style="padding:10px;">
-                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                                <a href="${tcgUrl}" target="_blank" style="color:#f8fafc; background:#1e293b; border:1px solid #475569; padding:4px 7px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:700; white-space:nowrap;" title="View on TCGplayer">${tcgLabel}</a>
-                                <a href="${ebayBinUrl}" target="_blank" style="color:#10b981; background:rgba(16,185,129,0.1); border:1px solid #10b981; padding:4px 7px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:700; white-space:nowrap;" title="eBay Buy It Now listings under 85% of market price">${binLabel}</a>
-                                <a href="${ebayAuctionUrl}" target="_blank" style="color:#f59e0b; background:rgba(245,158,11,0.1); border:1px solid #f59e0b; padding:4px 7px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:700; white-space:nowrap;" title="eBay auctions ending soon, under 85% of market price">${aucLabel}</a>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                                <a href="${tcgUrl}" target="_blank" rel="noopener" style="color:#f8fafc; background:#1e293b; border:1px solid #475569; padding:4px 7px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:700; white-space:nowrap;" title="TCGplayer search. Market price from Scryfall${eurNote}.">${tcgLabel}</a>
+                                <a href="${ebayBinUrl}" target="_blank" rel="noopener" style="color:#10b981; background:rgba(16,185,129,0.1); border:1px solid #10b981; padding:4px 7px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:700; white-space:nowrap;" title="${escapeHtml(binTitle)}">${binLabel}</a>
+                                <a href="${ebayAuctionUrl}" target="_blank" rel="noopener" style="color:#f59e0b; background:rgba(245,158,11,0.1); border:1px solid #f59e0b; padding:4px 7px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:700; white-space:nowrap;" title="eBay auctions ending soonest, item price cap ${bundleOnly ? dealTxt : itemCap}. Remember to add shipping.">${aucLabel}</a>
+                                <details class="mp-more">
+                                    <summary class="mp-more-sum" title="More stores, eBay sold prices, flip calculator and price alert">More ▾</summary>
+                                    <div class="mp-more-menu">
+                                        <button class="mp-flip-btn mp-more-link" data-name="${escapeHtml(name)}" data-buy="${dealTxt}" data-sell="${unitPaper.toFixed(2)}">📈 Flip calculator (profit after fees)</button>
+                                        <button class="mp-alert-btn mp-more-link" data-name="${escapeHtml(name)}" data-price="${unitPaper.toFixed(2)}">🔔 Alert me when the price drops</button>
+                                        ${moreLinks}
+                                    </div>
+                                </details>
                             </div>
                         </td>
                     </tr>
@@ -712,10 +815,13 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
                 let signalBadge = "";
                 let borderColor = "#1e293b";
 
+                let hotCard = false;
                 if (hasLiveFlip && flipPct >= 15) {
+                    hotCard = true;
                     borderColor = "#10b981";
                     signalBadge = `<div style="background:rgba(16,185,129,0.18); border:1px solid #10b981; color:#10b981; padding:5px 8px; border-radius:4px; font-size:11px; font-weight:800; margin-bottom:8px; text-align:center;">🔥 LIVE EBAY ARBITRAGE: +$${flipProfit.toFixed(2)}/ea (${flipPct.toFixed(0)}% UNDER FLOOR)</div>`;
                 } else if (unitSpread >= 5.0 && spreadPctCard >= 25) {
+                    hotCard = unitSpread >= 8.0 && spreadPctCard >= 40; // only a big paper-vs-MTGO gap gets the foil treatment
                     borderColor = "#f59e0b";
                     signalBadge = `<div style="background:rgba(245,158,11,0.15); border:1px solid #f59e0b; color:#f59e0b; padding:5px 8px; border-radius:4px; font-size:11px; font-weight:800; margin-bottom:8px; text-align:center;">💎 DIGITAL ➔ PAPER ARB: +$${unitSpread.toFixed(2)}/ea (${spreadPctCard.toFixed(0)}% SPREAD)</div>`;
                 } else if (unitSpread <= -1.0) {
@@ -734,7 +840,7 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
                     : `🎯 eBay Buy It Now under $${maxSnipe} (Market $${paperFloor.toFixed(2)}) ↗`;
 
                 return `
-                    <div style="background:#0b1120; border:1px solid ${borderColor}; border-radius:8px; padding:14px; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div class="${hotCard ? "mp-foil-card" : ""}" style="background:#0b1120; border:1px solid ${borderColor}; border-radius:8px; padding:14px; display:flex; flex-direction:column; justify-content:space-between;">
                         <div>
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                                 <span style="font-weight:700; color:#38bdf8; font-size:14px;">${escapeHtml(name)} (x${item.quantity || 1})</span>
@@ -754,7 +860,9 @@ function renderChaseHuntAndArbitrage(targets, watchlistItems, deckMeta, baseline
 
         // Run Algorithmic Synergy & Metagame Trend Radar across user's Buy List + Watchlist
         renderSynergyAndTrendRadar(enrichedTargets, watchlistItems, priceMap);
-    });
+        if (window.MPFeatures2 && window.MPFeatures2.applyHot) window.MPFeatures2.applyHot();
+    };
+    loadPricesRobust(cardNames, paint);
 }
 
 // 7. Algorithmic Metagame Trend & Cross-Archetype Synergy Radar (Populates on Buy List & Meta Trends)
@@ -992,6 +1100,8 @@ function initSettingsPanel() {
 
         applyWatermarkState(isLicensed);
         if (!settingsPanel) return;
+        // innerHTML below wipes anything appended earlier (the backup card), so re-mount it right after.
+        setTimeout(() => { if (window.MPFeatures2 && window.MPFeatures2.renderBackup) window.MPFeatures2.renderBackup(); }, 0);
 
         settingsPanel.innerHTML = `
             <div style="background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:18px; max-width:540px; display:flex; flex-direction:column; gap:14px; position:relative; z-index:2;">
@@ -1081,7 +1191,10 @@ function initSettingsPanel() {
 }
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === "local") syncAllPanels();
+    if (namespace !== "local") return;
+    // Only inputs that change what the Buy List shows. Price caches are written BY the render, so listening to them loops.
+    const WATCH = ["watchlist","watchlist_cards","card_chase","procurementTargets","currentDecklist","deckMeta","savedChaseLists","mpCollection","useCollection","hideOwned","mpShipSettings"];
+    if (Object.keys(changes).some((k) => WATCH.includes(k))) syncAllPanels();
 });
 
 // === MP_CHASE_PORTFOLIO_START ===
@@ -1543,51 +1656,24 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
             firstTd.dataset.cardName = cleanName; // keep the real name; the cell text gains badges below
             const safeName = escapeHtml(cleanName);
 
-            // Wrap existing text cleanly without breaking textContent readers
-            const artUrl = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cleanName)}&format=image&version=art_crop`;
+            // Art, set and mana cost come from the same batched Scryfall response as the prices (window.mpPriceMap),
+            // so there is no per-card request to rate-limit or to fail silently.
+            const pm = window.mpPriceMap || {};
+            const meta = pm[cleanName.toLowerCase()] || pm[cleanName.toLowerCase().split(" // ")[0]];
+            const artUrl = (meta && meta.art) ? meta.art : `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cleanName)}&format=image&version=art_crop`;
             firstTd.innerHTML = `
                 <div class="mp-card-cell-wrap">
                     <img class="mp-art-thumb" src="${escapeHtml(artUrl)}" alt="" loading="lazy" />
                     <div>
                         <div style="color:#10b981; font-weight:600; font-size:13px;">${safeName}</div>
                         <div class="mp-card-meta-sub" data-meta-for="${safeName}">
-                            <span class="mp-set-badge">MTG</span>
+                            ${meta ? `<span class="mp-set-badge" title="${escapeHtml(meta.set_name || "")}">${escapeHtml(meta.set || "MTG")}</span>${formatManaPips(meta.mana || "")}` : `<span class="mp-set-badge">…</span>`}
                         </div>
                     </div>
                 </div>
             `;
             const thumb = firstTd.querySelector(".mp-art-thumb");
             if (thumb) thumb.addEventListener("error", () => { thumb.style.display = "none"; }, { once: true });
-
-            // Fetch lightweight Scryfall JSON once per session for set code & mana cost pips
-            if (!scryfallMetaCache[cleanName]) {
-                try {
-                    const cached = sessionStorage.getItem("mp_sf_" + cleanName);
-                    if (cached) {
-                        scryfallMetaCache[cleanName] = JSON.parse(cached);
-                    } else {
-                        const r = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cleanName)}`);
-                        if (r.ok) {
-                            const d = await r.json();
-                            scryfallMetaCache[cleanName] = {
-                                set: (d.set || "MTG").toUpperCase(),
-                                mana: d.mana_cost || "",
-                                usd: d.prices?.usd || null
-                            };
-                            sessionStorage.setItem("mp_sf_" + cleanName, JSON.stringify(scryfallMetaCache[cleanName]));
-                        }
-                    }
-                } catch (e) {}
-            }
-
-            const meta = scryfallMetaCache[cleanName];
-            const metaContainer = firstTd.querySelector(".mp-card-meta-sub");
-            if (meta && metaContainer) {
-                metaContainer.innerHTML = `
-                    <span class="mp-set-badge">${escapeHtml(meta.set)}</span>
-                    ${formatManaPips(meta.mana)}
-                `;
-            }
         }
     }
 

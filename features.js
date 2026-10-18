@@ -71,32 +71,55 @@
         lastTargets = rows || [];
         const bar = ensureTotalsBar();
         if (!bar) return;
-        let paperMkt = 0, paperBin = 0, tixMkt = 0, tixBin = 0, unpriced = 0, cardsLeft = 0;
+        const ship = window.mpShip || { ship: 0.78, perOrder: 1 };
+        const shipShare = ship.ship / Math.max(1, ship.perOrder);
+        let paperMkt = 0, dealBudget = 0, itemsBudget = 0, tixMkt = 0, tixBin = 0, unpriced = 0, cardsLeft = 0, heavy = 0, pricedLeft = 0;
         lastTargets.forEach((r) => {
             const rem = r.remaining != null ? r.remaining : (r.quantity || 1);
             if (rem <= 0) return;
             cardsLeft += rem;
-            if (r.unitPaper > 0) { paperMkt += r.unitPaper * rem; paperBin += r.unitPaper * BIN_FACTOR * rem; } else unpriced++;
+            if (r.unitPaper > 0) {
+                const deal = r.unitPaper * BIN_FACTOR;
+                paperMkt += r.unitPaper * rem; dealBudget += deal * rem;
+                itemsBudget += Math.max(0, deal - shipShare) * rem; pricedLeft += rem;
+                if (shipShare > r.unitPaper * 0.30) heavy += rem;
+            } else unpriced += rem;
             if (r.unitTix > 0) { tixMkt += r.unitTix * rem; tixBin += r.unitTix * BIN_FACTOR * rem; }
         });
         const pct = Math.round(BIN_FACTOR * 100);
-        const note = unpriced ? `${unpriced} unpriced` : `${cardsLeft} cards still needed`;
+        const orders = Math.ceil(cardsLeft / Math.max(1, ship.perOrder));
+        const shipEst = orders * ship.ship;
+        const note = unpriced ? `${unpriced} card(s) still without a price` : `${cardsLeft} cards still needed`;
         const html = `
             <div class="mp-stat-bar">
-                <div class="mp-stat"><div class="l">Paper market total</div><div class="v" style="color:#f59e0b">${money(paperMkt)}</div><div class="s">${esc(note)}</div></div>
-                <div class="mp-stat"><div class="l">Paper BIN target (≤${pct}%)</div><div class="v" style="color:#10b981">${money(paperBin)}</div><div class="s">saves ~${money(paperMkt - paperBin)} if every card hits target</div></div>
+                <div class="mp-stat" title="What the cards you still need cost at Scryfall's TCGplayer market price"><div class="l">Market price total</div><div class="v" style="color:#f59e0b">${money(paperMkt)}</div><div class="s">${esc(note)}</div></div>
+                <div class="mp-stat" title="85% of market, shipping included. This is the most you should pay per card, delivered."><div class="l">Deal budget, delivered (≤${pct}%)</div><div class="v" style="color:#10b981">${money(dealBudget)}</div><div class="s">≈ ${money(itemsBudget)} items + shipping · saves ${money(paperMkt - dealBudget)}</div></div>
+                <div class="mp-stat" title="Estimated shipping if you buy on eBay, from the shipping settings below"><div class="l">Est. eBay shipping</div><div class="v" style="color:#e2e8f0">${money(shipEst)}</div><div class="s">${orders} order(s) × ${money(ship.ship)}</div></div>
+                <div class="mp-stat" title="Cards where shipping would be more than 30% of the card's price. Buy these in bundles or from TCGplayer."><div class="l">Ship-heavy cards</div><div class="v" style="color:${heavy ? "#f59e0b" : "#10b981"}">${heavy}</div><div class="s">${heavy ? "bundle these or buy on TCGplayer" : "shipping is a small share"}</div></div>
                 <div class="mp-stat"><div class="l">MTGO TIX total</div><div class="v" style="color:#38bdf8">${tixMkt.toFixed(2)} TIX</div><div class="s">remaining cards, market</div></div>
-                <div class="mp-stat"><div class="l">TIX BIN target (≤${pct}%)</div><div class="v" style="color:#38bdf8">${tixBin.toFixed(2)} TIX</div><div class="s">≈ ${money(tixBin)} at $1 per TIX</div></div>
+                <div class="mp-stat" title="85% of the TIX price, a reasonable bot-buy target"><div class="l">MTGO TIX target (≤${pct}%)</div><div class="v" style="color:#38bdf8">${tixBin.toFixed(2)} TIX</div><div class="s">≈ ${money(tixBin)} at $1 per TIX</div></div>
             </div>
             <div class="mp-tools">
-                <button class="mp-btn go" id="mp-uv-scan">🔎 Scan open market for undervalued paper</button>
-                <span id="mp-uv-status" style="font-size:11px;color:#94a3b8">Checks every printing of each card on Scryfall and flags the cheapest ones.</span>
+                <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px" title="Typical delivery charge on a cheap eBay single. Used to turn the 85% deal rule into an item-price cap.">📦 Shipping per eBay order $
+                    <input class="mp-field" id="mp-ship-cost" type="number" step="0.01" min="0" value="${ship.ship}" style="width:72px;padding:4px 6px"></label>
+                <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px" title="How many cards you usually buy from one seller per order. More cards per order means less shipping per card.">cards per order
+                    <input class="mp-field" id="mp-ship-per" type="number" step="1" min="1" value="${ship.perOrder}" style="width:60px;padding:4px 6px"></label>
+                <button class="mp-btn go" id="mp-uv-scan" title="Looks at every printing of each card on Scryfall and flags cheaper printings and price dips">🔎 Find cheaper printings &amp; price dips</button>
+                <span id="mp-uv-status" style="font-size:11px;color:#94a3b8"></span>
             </div>`;
         if (bar.dataset.sig === html) return;
+        const prevStatus = $("mp-uv-status") ? $("mp-uv-status").textContent : "";
         bar.dataset.sig = html;
         bar.innerHTML = html;
+        if ($("mp-uv-status")) $("mp-uv-status").textContent = prevStatus || "Prices are Scryfall's TCGplayer market price.";
         const btn = $("mp-uv-scan");
         if (btn) btn.addEventListener("click", scanUndervalued);
+        const saveShip = () => {
+            const v = parseFloat($("mp-ship-cost").value), per = parseInt($("mp-ship-per").value, 10);
+            setStore({ mpShipSettings: { ship: isFinite(v) && v >= 0 ? v : 0.78, perOrder: per > 0 ? per : 1 } });
+        };
+        $("mp-ship-cost").addEventListener("change", saveShip);
+        $("mp-ship-per").addEventListener("change", saveShip);
     }
 
     async function fetchPrintings(name, cache) {
@@ -155,10 +178,13 @@
                     break;
                 }
             }
-            await setStore({ printingsCache: cache });
+            const prevScan = (await getStore({ mpScanFound: {} })).mpScanFound || {};
+            const scanNow = {};
+            found.forEach((x) => { scanNow[x.name.toLowerCase().trim()] = { gap: x.gap, dip: x.dip, set: x.cheapest.set, usd: x.cheapest.usd, at: Date.now() }; });
+            await setStore({ printingsCache: cache, mpScanFound: Object.assign({}, prevScan, scanNow) });
             found.sort((a, b) => (b.gap * b.ref) - (a.gap * a.ref));
             renderUndervalued(found, batch.length, wanted.length);
-            if (status) status.textContent = `Done. ${found.length} undervalued of ${batch.length} scanned${wanted.length > batch.length ? " (first 40 cards)" : ""}.`;
+            if (status) status.textContent = `Done. ${found.length} of ${batch.length} cards have a cheaper printing or a price dip${wanted.length > batch.length ? " (first 40 cards)" : ""}.`;
         } finally {
             scanning = false;
             if (btn) btn.disabled = false;
@@ -170,13 +196,15 @@
         const box = $("mp-uv-results");
         if (!box) return;
         if (!found.length) {
-            box.innerHTML = `<div class="mp-empty" style="margin-bottom:12px">Nothing undervalued right now across ${scanned} cards. Prices on every printing are within 12% of market.</div>`;
+            box.innerHTML = `<div class="mp-empty" style="margin-bottom:12px">No cheaper printings or price dips across ${scanned} cards. Prices on every printing are within 12% of market.</div>`;
             return;
         }
         const rows = found.map((f, i) => {
-            const ceiling = Math.max(0.5, f.cheapest.usd * 0.9).toFixed(2);
+            const ship = window.mpShip || { ship: 0.78, perOrder: 1 };
+            const delivered = f.cheapest.usd * 0.90; // pay at most 90% of the cheapest printing's price, delivered
+            const ceiling = Math.max(0.25, delivered - ship.ship / Math.max(1, ship.perOrder)).toFixed(2);
             const q = encodeURIComponent(`MTG "${f.name}" ${f.cheapest.setName} -proxy -proxies -playtest -fanart -alter -altered -custom -placeholder -token -replica`);
-            const ebay = `https://www.ebay.com/sch/i.html?_nkw=${q}&_sacat=19107&LH_BIN=1&_sop=15&_udhi=${ceiling}`;
+            const ebay = `https://www.ebay.com/sch/i.html?_nkw=${q}&_sacat=19107&LH_BIN=1&_sop=15&_udhi=${ceiling}&mpmax=${delivered.toFixed(2)}&mpmkt=${f.cheapest.usd.toFixed(2)}&mpname=${encodeURIComponent(f.name)}`;
             const tcg = `https://www.tcgplayer.com/search/magic/product?q=${encodeURIComponent(f.name + " " + f.cheapest.setName)}`;
             const why = [];
             if (f.gap >= 0.12) why.push(`<span class="mp-pill g">${Math.round(f.gap * 100)}% cheaper printing</span>`);
@@ -186,23 +214,24 @@
                 <div style="color:#f59e0b;font-weight:700">${f.ref > 0 ? money(f.ref) : "—"}</div>
                 <div><strong style="color:#f8fafc">${money(f.cheapest.usd)}</strong><div style="font-size:10px;color:#94a3b8">${esc(f.cheapest.set)} #${esc(f.cheapest.cn)} · ${f.count} printings</div></div>
                 <div><div style="display:flex;gap:6px;flex-wrap:wrap">
-                    <a class="mp-btn" style="color:#10b981;border-color:#10b981" href="${esc(ebay)}" target="_blank" rel="noopener">eBay BIN &lt;$${ceiling}</a>
+                    <a class="mp-btn" style="color:#10b981;border-color:#10b981" href="${esc(ebay)}" target="_blank" rel="noopener">eBay BIN ≤$${ceiling} + ship</a>
                     <a class="mp-btn" href="${esc(tcg)}" target="_blank" rel="noopener">TCG</a>
                     <button class="mp-btn" data-uv-bm="${i}">★ Bookmark</button>
                 </div></div></div>`;
         }).join("");
         box.innerHTML = `
             <div class="card-box" style="margin:0 0 14px;border-color:#10b981">
-                <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#10b981">🎯 Undervalued paper on the open market (${found.length})</div>
+                <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#10b981">🎯 Cheaper printings and price dips (${found.length})</div>
                 <div class="mp-uv-grid"><div class="mp-uv-head"><span>Card</span><span>Default price</span><span>Cheapest printing</span><span>Hunt</span></div>${rows}</div>
-                <div style="font-size:10px;color:#64748b;margin-top:8px">Prices are Scryfall's TCGplayer market data. The eBay link searches Buy It Now under 90% of the cheapest printing's price, cheapest first.</div>
+                <div style="font-size:10px;color:#64748b;margin-top:8px">Prices are Scryfall's TCGplayer market data. The eBay link searches Buy It Now listings up to 90% of that printing's price once shipping is added, cheapest first.</div>
             </div>`;
         box.querySelectorAll("[data-uv-bm]").forEach((b) => b.addEventListener("click", async () => {
             const f = found[parseInt(b.getAttribute("data-uv-bm"), 10)];
             if (!f) return;
-            const ceiling = Math.max(0.5, f.cheapest.usd * 0.9).toFixed(2);
-            const url = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent('MTG "' + f.name + '" ' + f.cheapest.setName + " -proxy -custom")}&_sacat=19107&LH_BIN=1&_sop=15&_udhi=${ceiling}`;
-            await addBookmark({ title: `${f.name} (${f.cheapest.set}) BIN under $${ceiling}`, url, source: "Scan", note: `Cheapest printing ${money(f.cheapest.usd)}` });
+            const delivered = f.cheapest.usd * 0.90;
+            const ceiling = Math.max(0.25, delivered - (window.mpShip ? window.mpShip.ship / Math.max(1, window.mpShip.perOrder) : 0.78)).toFixed(2);
+            const url = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent('MTG "' + f.name + '" ' + f.cheapest.setName + " -proxy -custom")}&_sacat=19107&LH_BIN=1&_sop=15&_udhi=${ceiling}&mpmax=${delivered.toFixed(2)}&mpmkt=${f.cheapest.usd.toFixed(2)}&mpname=${encodeURIComponent(f.name)}`;
+            await addBookmark({ title: `${f.name} (${f.cheapest.set}) up to $${ceiling} + ship`, url, source: "Scan", note: `Cheapest printing ${money(f.cheapest.usd)}` });
             b.textContent = "✓ Saved";
         }));
     }
@@ -234,7 +263,7 @@
             <button class="mp-btn go" id="mp-deck-new">+ New deck (opens Buy List)</button>
             <input class="mp-field" id="mp-deck-filter" placeholder="Filter decks..." style="width:200px">
             <select class="mp-field" id="mp-decks-format" title="Format used by Copy list"><option value="plain">Copy as: plain list</option><option value="arena">Copy as: Arena / Moxfield</option><option value="manabox">Copy as: ManaBox CSV</option><option value="csv">Copy as: spreadsheet CSV</option></select>
-            <span style="font-size:11px;color:#94a3b8">${names.length} saved. Decks are stored in this browser and survive restarts.</span></div>`;
+            <button class="mp-btn" data-goto-backup type="button" title="Download a backup file of your decks and bookmarks">💾 Backup</button><span style="font-size:11px;color:#94a3b8">${names.length} saved. Decks are stored in this browser and survive restarts.</span></div>`;
         if (!names.length) {
             html += `<div class="mp-empty">No saved decks yet. Paste a list in Buy List and press "Save &amp; Compile". It will appear here.</div>`;
         } else {
@@ -348,7 +377,7 @@
             <div id="mp-bm-msg" style="font-size:11px;color:#ef4444;margin-top:6px"></div>
         </div>
         <div class="mp-tools"><input class="mp-field" id="mp-bm-filter" placeholder="Filter bookmarks..." style="width:240px">
-            <span style="font-size:11px;color:#94a3b8">${list.length} saved. The ★ Bookmark button on eBay listings lands here too.</span></div>`;
+            <button class="mp-btn" data-goto-backup type="button" title="Back up or export your bookmarks">💾 Backup / export</button><span style="font-size:11px;color:#94a3b8">${list.length} saved. The ★ Bookmark button on eBay listings lands here too.</span></div>`;
         if (!list.length) {
             html += `<div class="mp-empty">No bookmarks yet. Use "★ Bookmark" on an eBay listing, from the undervalued scan, or add one above.</div>`;
         } else {

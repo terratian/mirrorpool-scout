@@ -1,5 +1,106 @@
 // --- Mirror Pool Scout: Background Router & Scryfall Pricing Engine ---
 
+try { importScripts("affiliate.js", "scryfall.js"); } catch (e) { /* optional: only used to tag eBay links in notifications */ }
+
+// ---------------- Price alerts ----------------
+// Storage: mpAlerts { [cardKey]: { name, target, lastPrice, lastAt } }, mpAlertSettings { enabled, intervalMin },
+//          mpAlertStatus { checkedAt, checked, hits }, mpAlertLinks { [notificationId]: url }
+const MP_ALARM = "mp-price-check";
+
+function mpScheduleAlarm() {
+    chrome.storage.local.get({ mpAlertSettings: { enabled: false, intervalMin: 360 } }, (r) => {
+        const st = r.mpAlertSettings || {};
+        chrome.alarms.clear(MP_ALARM, () => {
+            if (st.enabled) chrome.alarms.create(MP_ALARM, { delayInMinutes: 1, periodInMinutes: Math.max(30, Number(st.intervalMin) || 360) });
+        });
+    });
+}
+chrome.runtime.onInstalled.addListener(mpScheduleAlarm);
+chrome.runtime.onStartup.addListener(mpScheduleAlarm);
+chrome.storage.onChanged.addListener((changes, area) => { if (area === "local" && changes.mpAlertSettings) mpScheduleAlarm(); });
+chrome.alarms.onAlarm.addListener((a) => { if (a.name === MP_ALARM) mpRunPriceCheck(false); });
+
+chrome.notifications.onClicked.addListener((id) => {
+    chrome.storage.local.get({ mpAlertLinks: {} }, (r) => {
+        const url = (r.mpAlertLinks || {})[id];
+        if (url) chrome.tabs.create({ url });
+        chrome.notifications.clear(id);
+    });
+});
+
+async function mpRunPriceCheck(manual) {
+    const st = await chrome.storage.local.get({
+        mpAlerts: {}, mpAlertSettings: { enabled: false }, procurementTargets: [], mpCollection: null, useCollection: false, scryfallPriceCache: {}
+    });
+    if (!manual && !(st.mpAlertSettings && st.mpAlertSettings.enabled)) return { checked: 0, hits: [] };
+
+    const targets = Array.isArray(st.procurementTargets) ? st.procurementTargets : [];
+    const owned = (name) => {
+        if (!st.useCollection || !st.mpCollection || !st.mpCollection.cards) return 0;
+        const k = String(name).toLowerCase().trim();
+        const hit = st.mpCollection.cards[k] || st.mpCollection.cards[k.split(" // ")[0]];
+        return hit ? (hit.q || 0) : 0;
+    };
+    // Only cards that are still on the Buy List and still needed.
+    const watch = [];
+    targets.forEach((t) => {
+        const key = String(t.cardName || "").toLowerCase().trim();
+        const a = st.mpAlerts[key];
+        if (!a || !(Number(a.target) > 0)) return;
+        const need = (t.quantity || 1) - (t.acquired || 0) - owned(t.cardName);
+        if (need > 0) watch.push({ key, name: t.cardName, target: Number(a.target), last: a });
+    });
+    if (!watch.length) {
+        await chrome.storage.local.set({ mpAlertStatus: { checkedAt: Date.now(), checked: 0, hits: [] } });
+        return { checked: 0, hits: [] };
+    }
+
+    let prices = {};
+    try { prices = (await self.MPScry.fetchPrices(watch.map((w) => w.name))).prices; } catch (e) { /* offline: try again next alarm */ }
+    if (Object.keys(prices).length) {
+        const old = await chrome.storage.local.get({ scryfallPriceCache: {} });
+        await chrome.storage.local.set({ scryfallPriceCache: Object.assign({}, old.scryfallPriceCache || {}, prices) });
+    }
+
+    const alerts = Object.assign({}, st.mpAlerts);
+    const links = {};
+    const hits = [];
+    const DAY = 24 * 3600 * 1000;
+    watch.forEach((w) => {
+        const p = prices[w.key] || prices[w.key.split(" // ")[0]];
+        if (!p || !(p.usd > 0)) return;
+        alerts[w.key] = Object.assign({}, alerts[w.key], { price: p.usd });
+        if (p.usd > w.target) return;
+        const seen = w.last.lastPrice, at = w.last.lastAt || 0;
+        if (!manual && seen === p.usd && Date.now() - at < DAY) return; // don't repeat the same alert all day
+        hits.push({ name: w.name, price: p.usd, target: w.target });
+        alerts[w.key] = Object.assign({}, alerts[w.key], { lastPrice: p.usd, lastAt: Date.now() });
+        const q = encodeURIComponent('MTG "' + w.name + '" -proxy -proxies -playtest -custom -token -replica');
+        let url = "https://www.ebay.com/sch/i.html?_nkw=" + q + "&_sacat=19107&LH_BIN=1&_sop=15&_udhi=" + (w.target * 0.95).toFixed(2);
+        try { if (self.MPAffiliate) url = self.MPAffiliate.decorate(url); } catch (e) { /* keep plain url */ }
+        const id = "mp-alert-" + w.key.replace(/[^a-z0-9]+/g, "-").slice(0, 40) + "-" + Date.now();
+        links[id] = url;
+        chrome.notifications.create(id, {
+            type: "basic", iconUrl: "icon128.png", priority: 1,
+            title: "📉 " + w.name + " is now $" + p.usd.toFixed(2),
+            message: "At or under your $" + w.target.toFixed(2) + " target. Click to search eBay Buy It Now."
+        });
+    });
+    const oldLinks = (await chrome.storage.local.get({ mpAlertLinks: {} })).mpAlertLinks || {};
+    const keepKeys = Object.keys(oldLinks).slice(-30);
+    const mergedLinks = {}; keepKeys.forEach((k) => { mergedLinks[k] = oldLinks[k]; }); Object.assign(mergedLinks, links);
+    await chrome.storage.local.set({ mpAlerts: alerts, mpAlertLinks: mergedLinks, mpAlertStatus: { checkedAt: Date.now(), checked: watch.length, hits } });
+    return { checked: watch.length, hits };
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message && message.action === "runPriceCheckNow") {
+        mpRunPriceCheck(true).then((r) => sendResponse({ status: "success", ...r })).catch((e) => sendResponse({ status: "error", message: String(e) }));
+        return true;
+    }
+});
+// ---------------- end price alerts ----------------
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // 1. Route migrated datasets from Popup / Content Scripts into Storage
     if (message.action === "sync_to_dashboard") {
@@ -122,51 +223,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "fetchCollectionPrices") {
         const cardNames = message.cardNames || [];
         if (cardNames.length === 0) {
-            sendResponse({ status: "empty", prices: {} });
+            sendResponse({ status: "empty", prices: {}, missing: [] });
             return;
         }
-
-        const uniqueNames = [...new Set(cardNames.map(n => n.trim()).filter(Boolean))];
-        const batches = [];
-        for (let i = 0; i < uniqueNames.length; i += 75) {
-            batches.push(uniqueNames.slice(i, i + 75));
-        }
-
         (async () => {
-            const priceMap = {};
-            for (const batch of batches) {
-                const identifiers = batch.map(name => ({ name }));
-                try {
-                    const res = await fetch("https://api.scryfall.com/cards/collection", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ identifiers })
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        (data.data || []).forEach(card => {
-                            const key = card.name.toLowerCase();
-                            priceMap[key] = {
-                                name: card.name,
-                                usd: parseFloat(card.prices?.usd || card.prices?.usd_foil || 0),
-                                usd_foil: parseFloat(card.prices?.usd_foil || 0),
-                                tix: parseFloat(card.prices?.tix || 0)
-                            };
-                        });
-                    }
-                } catch (err) {
-                    console.error("[MPScout] Scryfall collection batch error:", err);
-                }
-                // Respect Scryfall rate limit (100ms between requests)
-                await new Promise(r => setTimeout(r, 100));
+            try {
+                const r = await self.MPScry.fetchPrices(cardNames);
+                // Merge into the cache (never replace it) so My Decks / alerts can use every saved card.
+                const old = await chrome.storage.local.get({ scryfallPriceCache: {} });
+                const merged = Object.assign({}, old.scryfallPriceCache || {}, r.prices);
+                if (Object.keys(r.prices).length) await chrome.storage.local.set({ scryfallPriceCache: merged });
+                sendResponse({ status: r.failed ? "error" : (r.partial || r.missing.length ? "partial" : "success"), prices: r.prices, missing: r.missing, error: r.error });
+            } catch (e) {
+                sendResponse({ status: "error", prices: {}, missing: [], error: String(e && e.message || e) });
             }
-            // Merge into the cache (never replace it) so My Decks can price every saved list, not just the last one fetched.
-            chrome.storage.local.get({ scryfallPriceCache: {} }, (old) => {
-                const merged = Object.assign({}, old.scryfallPriceCache || {}, priceMap);
-                chrome.storage.local.set({ scryfallPriceCache: merged }, () => {
-                    sendResponse({ status: "success", prices: priceMap });
-                });
-            });
         })();
         return true;
     }
@@ -305,16 +375,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "importDetectedToScout") {
         const mode = message.mode;
         if (mode === "deck" && Array.isArray(message.decklist) && message.decklist.length > 0) {
-            chrome.storage.local.set({
-                procurementTargets: message.decklist,
-                currentDecklist: message.decklist,
-                deckMeta: {
-                    deckName: message.deckName || "Auto-Detected Deck",
-                    printingTarget: "normal",
-                    conditionFloor: "any"
-                }
-            }, () => {
-                sendResponse({ status: "success", count: message.decklist.length });
+            const deckName = String(message.deckName || "Imported Deck").slice(0, 80);
+            const cards = message.decklist.map((c) => ({ cardName: c.cardName, quantity: c.quantity || 1, acquired: c.acquired || 0, basis: c.basis || 0, set: c.set || "", cn: c.cn || "", foil: !!c.foil }));
+            const meta = { deckName, printingTarget: "normal", conditionFloor: "any" };
+            chrome.storage.local.get({ savedChaseLists: {} }, (r) => {
+                // Keep the deck in My Decks (persistent) as well as making it the active Buy List.
+                const lists = Object.assign({}, r.savedChaseLists || {});
+                lists[deckName] = { cards, meta, updatedAt: Date.now(), source: message.url || "" };
+                chrome.storage.local.set({ procurementTargets: cards, currentDecklist: cards, deckMeta: meta, savedChaseLists: lists }, () => {
+                    sendResponse({ status: "success", count: cards.length });
+                });
             });
             return true;
         }

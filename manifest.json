@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Mirror Pool Scout",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Live MTG market procurement, visual decklist parsing, and financial tracking.",
   "permissions": [
     "storage",
     "activeTab",
     "alarms",
+    "notifications",
     "scripting"
   ],
   "action": {
@@ -29,7 +30,16 @@
     "*://*.wizards.com/*",
     "https://api.scryfall.com/*",
     "*://*.mtgscavenger.com/*",
-    "https://api.gumroad.com/*"
+    "https://api.gumroad.com/*",
+    "*://*.moxfield.com/*",
+    "https://api2.moxfield.com/*",
+    "*://*.archidekt.com/*",
+    "*://*.tappedout.net/*",
+    "*://*.deckstats.net/*",
+    "*://scryfall.com/*",
+    "*://*.mtgtop8.com/*",
+    "*://*.edhrec.com/*",
+    "*://*.aetherhub.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -64,6 +74,36 @@
       "js": [
         "affiliate.js",
         "auto-detector.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://*.ebay.com/sch/*"
+      ],
+      "js": [
+        "ebay-search.js"
+      ],
+      "run_at": "document_idle",
+      "css": [
+        "ebay-search.css"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.moxfield.com/decks/*",
+        "*://*.archidekt.com/decks/*",
+        "*://*.tappedout.net/mtg-decks/*",
+        "*://*.deckstats.net/decks/*",
+        "*://scryfall.com/*decks*",
+        "*://*.mtgtop8.com/*",
+        "*://*.edhrec.com/*",
+        "*://*.aetherhub.com/*"
+      ],
+      "js": [
+        "listformats.js",
+        "deckextract.js",
+        "deckpill.js"
       ],
       "run_at": "document_idle"
     }

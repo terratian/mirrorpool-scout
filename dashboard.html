@@ -5,6 +5,15 @@
     <title>Mirror Pool Scout</title>
     <link rel="icon" type="image/png" href="icon48.png">
     <style>
+        /* Deal "foil" effects: rows and Buy List cards with a real delivered deal shimmer like a foil card. */
+        @keyframes mpFoilSweep { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        @keyframes mpFoilGlow { 0%,100% { box-shadow: 0 0 6px rgba(74,222,128,.35); } 50% { box-shadow: 0 0 16px rgba(34,211,238,.7); } }
+        tr.mp-foil td { background-image: linear-gradient(110deg, transparent 30%, rgba(125,255,200,.14) 45%, rgba(190,160,255,.16) 55%, transparent 70%); background-size: 200% 100%; animation: mpFoilSweep 3.2s linear infinite; }
+        tr.mp-foil td:first-child { box-shadow: inset 3px 0 0 #4ade80; }
+        .mp-foil-card { position: relative; border: 1px solid transparent !important; background-image: linear-gradient(#0b1120,#0b1120), linear-gradient(120deg,#4ade80,#22d3ee,#a78bfa,#f472b6,#4ade80); background-origin: border-box; background-clip: padding-box, border-box; background-size: 100% 100%, 300% 100%; animation: mpFoilSweep 4s linear infinite, mpFoilGlow 2.4s ease-in-out infinite; }
+        .mp-hot-pill { display: inline-block; margin: 0 6px 4px 0; padding: 2px 8px; border-radius: 999px; font: 800 11px/1.4 system-ui,sans-serif; color: #052e16; background: linear-gradient(120deg,#4ade80,#22d3ee,#a78bfa,#4ade80); background-size: 300% 100%; animation: mpFoilSweep 3s linear infinite; text-decoration: none; }
+        @media (prefers-reduced-motion: reduce) { tr.mp-foil td, .mp-foil-card, .mp-hot-pill { animation: none; } }
+
         :root {
             --bg-base: #030712;
             --bg-sidebar: #070d17;
@@ -646,6 +655,7 @@ table tbody td {
         <a class="nav-item" data-tab="tab-arbitrage">Arbitrage (Paper vs TIX)</a>
         <a class="nav-item" data-tab="tab-meta">Meta Trends</a>
         <a class="nav-item" data-tab="tab-mydecks">📂 My Decks</a>
+        <a class="nav-item" data-tab="tab-collection">📚 My Collection</a>
         <a class="nav-item" data-tab="tab-bookmarks">★ Bookmarks</a>
         <!-- MP_PORTFOLIO_START -->
         <div id="mp-saved-decks-sidebar">
@@ -671,7 +681,7 @@ table tbody td {
         <a class="nav-item" data-tab="tab-settings">Settings & API</a>
         <div class="sidebar-footer">
             <div>Suite Connection: <strong>Standalone Mode</strong></div>
-            <div style="margin-top:4px; font-size:10px; color:#10b981;">Alpha Build v1.4.1</div>
+            <div style="margin-top:4px; font-size:10px; color:#10b981;">Alpha Build v1.5.0</div>
             <div style="margin-top:4px; font-size:10px; color:#94a3b8;">Some links are affiliate links. See Settings.</div>
         </div>
     </div>
@@ -728,7 +738,12 @@ table tbody td {
                 </div>
             </div>
             <div class="card-box" id="mp-targets-card">
-                <div style="font-weight:700; font-size:14px; margin-bottom:8px;">Cards to Buy</div>
+                <div style="font-weight:700; font-size:14px; margin-bottom:8px; display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;">Cards to Buy <span id="mp-price-status" style="font-size:11px; font-weight:600; color:#94a3b8;"></span></div>
+                <div id="mp-owned-bar" class="mp-tools" style="margin-bottom:8px;">
+                    <label style="font-size:12px; color:#cbd5e1; display:flex; align-items:center; gap:6px;" title="Takes the copies you already own off what you still need to buy"><input type="checkbox" id="mp-use-collection"> Subtract cards I already own <span id="mp-owned-count" style="color:#94a3b8;">(no collection imported yet)</span></label>
+                    <label style="font-size:12px; color:#cbd5e1; display:flex; align-items:center; gap:6px;"><input type="checkbox" id="mp-hide-owned"> Hide cards I already have</label>
+                    <a href="#" id="mp-go-collection" style="font-size:11px; color:#38bdf8;">Import my collection</a>
+                </div>
                 <div id="procurement-container">
                     <table class="procurement-table">
                         <thead>
@@ -794,6 +809,12 @@ table tbody td {
             <div id="mp-mydecks-body"></div>
         </div>
 
+        <!-- 4b2. My Collection (imported from ManaBox etc.) -->
+        <div id="tab-collection" class="tab-panel">
+            <div class="page-title">My Collection</div>
+            <div id="mp-collection-body"></div>
+        </div>
+
         <!-- 4c. Bookmarks (persistent) -->
         <div id="tab-bookmarks" class="tab-panel">
             <div class="page-title">Bookmarks</div>
@@ -812,9 +833,13 @@ table tbody td {
     </div>
 
     <script src="affiliate.js"></script>
+    <script src="scryfall.js"></script>
     <script src="listformats.js"></script>
     <script src="dashboard.js"></script>
+    <script src="backup.js"></script>
     <script src="features.js"></script>
+    <script src="flipcalc.js"></script>
+    <script src="features2.js"></script>
 <!-- MP_OVERLAY_START -->
 <div id="mp-card-hover-overlay">
     <img id="mp-hover-card-img" src="" alt="Card Preview" />

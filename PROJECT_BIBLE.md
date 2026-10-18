@@ -137,3 +137,9 @@ Columns:
 - Plain-language labels (collector/arbitrage friendly): Chase Hunt -> **Buy List**, Meta Analytics -> **Meta Trends**, Arbitrage Desk -> **Arbitrage (Paper vs TIX)**, "Active Procurement Targets" -> **Cards to Buy**, Basis Spent -> **Paid So Far**, Marketplaces & Comps -> **Where to Buy**, Snipe -> **Deals Under 85%**. Internal ids (`tab-procurement`, `procurementTargets`, `savedChaseLists`) are unchanged on purpose (stored user data).
 - `listformats.js` (`MPLists.parse` / `MPLists.format`) is the single list reader/writer: MTGGoldfish/MTGDecks plain, Arena/Moxfield `(SET) 123 *F*`, TCGplayer `[SET]`, MTGO `SB:` and .dek XML, ManaBox / TCGplayer / Moxfield / Deckbox CSV. Card records may carry optional `set`, `cn`, `foil`. Exports: plain (also TCGplayer Mass Entry), Arena/Moxfield, ManaBox CSV, generic CSV.
 - New menus: My Decks and Bookmarks (`mpBookmarks` storage key). `features.js` holds BIN totals, undervalued-paper scan (Scryfall prints, cached in `printingsCache`), My Decks, Bookmarks.
+
+## v1.5.0
+- New files: scryfall.js (shared price loader, retry + fuzzy), flipcalc.js (fee/profit maths), features2.js (collection, flip calc, alerts, backup UI, hot/foil), ebay-search.js/.css (delivered-price grading on eBay results opened from Scout), backup.js (portable JSON schema 1), deckextract.js + deckpill.js (read decklists from MTG sites, "Send this deck to Scout" pill).
+- Storage keys: mpCollection, useCollection, hideOwned, mpShipSettings, mpFlipSettings, mpAlerts, mpAlertSettings, mpAlertStatus, mpAlertLinks, mpDeals, mpScanFound, mpLastBackup, mpBookmarks, printingsCache.
+- Rules: deal = delivered price <= 85% of market (shipping counted). dashboard storage listener only reacts to a whitelist of input keys (price caches are render outputs; listening to them loops).
+- Backup excludes the licence key. Not yet verified live: deck-site selectors, eBay overlay selectors, Impact tracking base.
