@@ -69,6 +69,7 @@
 
     function renderTotals(rows) {
         lastTargets = rows || [];
+        if (window.MPLandedUI) window.MPLandedUI.update(lastTargets);
         const bar = ensureTotalsBar();
         if (!bar) return;
         const ship = window.mpShip || { ship: 0.78, perOrder: 1 };

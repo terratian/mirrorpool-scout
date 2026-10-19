@@ -143,3 +143,8 @@ Columns:
 - Storage keys: mpCollection, useCollection, hideOwned, mpShipSettings, mpFlipSettings, mpAlerts, mpAlertSettings, mpAlertStatus, mpAlertLinks, mpDeals, mpScanFound, mpLastBackup, mpBookmarks, printingsCache.
 - Rules: deal = delivered price <= 85% of market (shipping counted). dashboard storage listener only reacts to a whitelist of input keys (price caches are render outputs; listening to them loops).
 - Backup excludes the licence key. Not yet verified live: deck-site selectors, eBay overlay selectors, Impact tracking base.
+
+## v1.5.1
+- Gumroad: GUMROAD_PRODUCT_ID set (licence keys must be enabled on the product). Verify call sends product_id + license_key.
+- New: landed.js + features3.js (Landed cost by store card, storage key mpLanded), docs/help.html (tutorial, linked from sidebar and banner), automatic pre-update snapshot (mpPreUpdateSnapshot, restore button in Backup card).
+- Not built yet: pinned extension ID, per-store live prices beyond Scryfall, label audit.

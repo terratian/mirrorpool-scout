@@ -8,7 +8,7 @@
 
     const SCHEMA = 1;
     const KEYS = ["savedChaseLists", "mpBookmarks", "mpCollection", "useCollection", "hideOwned", "mpAlerts", "mpAlertSettings",
-        "mpShipSettings", "mpFlipSettings", "watchlist", "procurementTargets", "deckMeta", "affiliateEnabled"];
+        "mpShipSettings", "mpFlipSettings", "mpLanded", "watchlist", "procurementTargets", "deckMeta", "affiliateEnabled"];
 
     function build(storage, appVersion) {
         const data = {};

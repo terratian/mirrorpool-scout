@@ -371,7 +371,7 @@
         if (!tab) return;
         let card = $("mp-backup-card");
         if (!card) { card = document.createElement("div"); card.id = "mp-backup-card"; card.className = "card-box"; card.style.marginTop = "20px"; tab.appendChild(card); }
-        const st = await getStore({ mpLastBackup: 0, savedChaseLists: {}, mpBookmarks: [] });
+        const st = await getStore({ mpPreUpdateSnapshot: null, mpLastBackup: 0, savedChaseLists: {}, mpBookmarks: [] });
         const stale = (Object.keys(st.savedChaseLists || {}).length + (st.mpBookmarks || []).length > 0) && (!st.mpLastBackup || Date.now() - st.mpLastBackup > 30 * 86400000);
         if (!card.isConnected) tab.appendChild(card); // settings panel may have been rebuilt while we waited
         card.innerHTML = `
@@ -387,6 +387,7 @@
                 <button class="mp-btn" id="bk-bm-html" type="button" title="Import this into Chrome, Firefox, Safari or Edge bookmarks">🔖 Bookmarks → browser bookmarks file (.html)</button>
                 <button class="mp-btn" id="bk-bm-csv" type="button">Bookmarks → spreadsheet (.csv)</button>
             </div>
+            ${st.mpPreUpdateSnapshot ? `<div class="mp-tools"><span style="font-size:11px;color:#94a3b8">Automatic copy taken before the last update${st.mpPreUpdateSnapshot.from ? " (from v" + esc(st.mpPreUpdateSnapshot.from) + ")" : ""}, ${esc(new Date(st.mpPreUpdateSnapshot.at).toLocaleString())}.</span> <button class="mp-btn" id="bk-snap-restore" type="button">Restore that copy</button></div>` : ""}
             <div id="bk-restore-panel"></div>`;
         $("bk-download").addEventListener("click", async () => {
             const all = await getStore(null);
@@ -397,6 +398,12 @@
             const sm = MPBackup.summary(bk.data);
             toast(`Backup saved: ${sm.decks} decks, ${sm.bookmarks} bookmarks`);
             renderBackup();
+        });
+        const snapBtn = $("bk-snap-restore");
+        if (snapBtn) snapBtn.addEventListener("click", async () => {
+            if (!confirm("Replace your current lists, bookmarks and settings with the automatic copy from before the last update?")) return;
+            await setStore(st.mpPreUpdateSnapshot.data || {});
+            toast("Restored. Reloading…"); setTimeout(() => location.reload(), 700);
         });
         $("bk-bm-html").addEventListener("click", async () => { const l = (await getStore({ mpBookmarks: [] })).mpBookmarks || []; download(`mirrorpool-bookmarks-${stamp()}.html`, MPBackup.bookmarksHtml(l), "text/html"); toast(`${l.length} bookmarks exported`); });
         $("bk-bm-csv").addEventListener("click", async () => { const l = (await getStore({ mpBookmarks: [] })).mpBookmarks || []; download(`mirrorpool-bookmarks-${stamp()}.csv`, MPBackup.bookmarksCsv(l), "text/csv"); toast(`${l.length} bookmarks exported`); });

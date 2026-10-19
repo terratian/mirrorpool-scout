@@ -16,6 +16,14 @@ function mpScheduleAlarm() {
     });
 }
 chrome.runtime.onInstalled.addListener(mpScheduleAlarm);
+// Before an update changes anything, keep a copy of the user's lists so nothing can be lost (restorable in Settings > Backup).
+chrome.runtime.onInstalled.addListener((d) => {
+    if (!d || d.reason !== "update") return;
+    const KEEP = ["savedChaseLists", "mpBookmarks", "mpCollection", "procurementTargets", "watchlist", "watchlist_cards", "card_chase", "deckMeta", "currentDecklist", "mpAlerts", "mpLanded", "mpFlipSettings", "mpShipSettings"];
+    chrome.storage.local.get(KEEP, (all) => {
+        chrome.storage.local.set({ mpPreUpdateSnapshot: { from: d.previousVersion || "", at: Date.now(), data: all } });
+    });
+});
 chrome.runtime.onStartup.addListener(mpScheduleAlarm);
 chrome.storage.onChanged.addListener((changes, area) => { if (area === "local" && changes.mpAlertSettings) mpScheduleAlarm(); });
 chrome.alarms.onAlarm.addListener((a) => { if (a.name === MP_ALARM) mpRunPriceCheck(false); });
