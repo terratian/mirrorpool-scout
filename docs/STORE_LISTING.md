@@ -1,40 +1,37 @@
 # Chrome Web Store listing: copy/paste text
 
-**Name:** Mirror Pool Scout: MTG Buy List, Deals & Flip Calc
+**Name:** Mirror Pool Scout: MTG Buy List and Deal Finder
 **Category:** Shopping
 **Language:** English
 
 **Summary (max 132 chars):**
-Turn any MTG decklist into a Buy List. Grade eBay deals by delivered price, calc flip profit, get price-drop alerts.
+Turn a Magic: The Gathering deck list into a Buy List and find deals by delivered price, shipping included.
 
 **Single purpose:**
-Help Magic: The Gathering players plan and price card purchases: import a decklist, see market prices, and judge eBay and marketplace listings including shipping.
+Help Magic: The Gathering players price and buy the cards on their deck lists. Users import a deck list, see market prices and what they still need, and the extension shows whether eBay and other marketplace listings are good deals once shipping is included.
 
-**Description:**
-Mirror Pool Scout turns any Magic: The Gathering deck list into a smart Buy List.
+**Description (NO lists of site or brand names: Chrome rejected v1.5.0 for keyword spam):**
+Mirror Pool Scout helps Magic: The Gathering players price and buy the cards on their deck lists.
 
-IMPORT WITHOUT RETYPING
-Paste a list or click "Import from Open Deck Page" on MTGGoldfish, Moxfield, Archidekt, TappedOut, Deckstats, MTGTop8, EDHREC, AetherHub and more. Reads MTGO, Arena, ManaBox, TCGplayer and CSV formats.
+BUILD A BUY LIST
+Paste a deck list or import one from the deck page you have open. Scout reads the common list formats, so you don't have to retype anything.
 
-SEE WHAT YOU STILL NEED
-Import your ManaBox/Moxfield collection and Scout subtracts what you own.
+BUY ONLY WHAT YOU NEED
+Import your own collection and Scout subtracts the cards you already own.
 
-FIND REAL DEALS, SHIPPING INCLUDED
-eBay's price filter ignores shipping. On eBay results opened from Scout, every listing is graded by delivered price against your target, and real deals light up.
+SEE REAL DEALS, SHIPPING INCLUDED
+Marketplace price filters ignore shipping. On search results opened from Scout, each listing is graded by its delivered price against your target, so cheap cards with expensive shipping don't fool you.
 
-EIGHT SOURCES, ONE CLICK
-Links to eBay, TCGplayer, Card Kingdom, Cardmarket, CoolStuffInc, Star City Games, Troll and Toad and Cardhoarder.
+COMPARE LANDED COST
+Estimate what your list costs delivered at different stores, including shipping and tax, and see the cheapest way to buy it.
 
-ARBITRAGE TOOLS
-Paper vs MTGO ticket view and a flip calculator with eBay and TCGplayer fees, shipping and break-even.
+FLIP CALCULATOR AND ALERTS
+Work out profit after fees and shipping, and get an optional desktop notification when a card drops to your target price.
 
-PRICE ALERTS
-Desktop notification when a Buy List card drops to your target.
+YOUR DATA STAYS ON YOUR DEVICE
+Lists, bookmarks and settings are stored in your browser. Back them up to a file any time. No account, no tracking.
 
-YOUR DATA STAYS YOURS
-Everything is stored in your browser. One-click backup and restore file. No account, no tracking.
-
-Free to use with a small watermark. A $9 lifetime key removes it and supports a solo, disabled-player developer. Prices from Scryfall. Some links are affiliate links. Not affiliated with Wizards of the Coast, eBay, TCGplayer or Scryfall.
+Free to use with a small watermark. An optional $9 lifetime key removes it and supports a solo developer. Card prices come from Scryfall. Some links are affiliate links.
 
 ## Privacy tab
 - Privacy policy URL: https://terratian.github.io/mirrorpool-scout/privacy.html (open it in a browser first to confirm it loads; GitHub Pages must be serving /docs)
